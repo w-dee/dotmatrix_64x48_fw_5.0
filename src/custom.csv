@@ -3,7 +3,8 @@ nvs,      data, nvs,     0x9000,    0x5000,
 otadata,  data, ota,     0xe000,    0x2000,
 app0,     app,  ota_0,   0x10000, 0x110000,
 app1,     app,  ota_1,   0x120000,0x110000,
-spiffs,   data, spiffs,  0x230000, 0x60000,
+spiffs,   data, spiffs,  0x230000, 0x50000,
+conf,     data, spiffs,  0x280000, 0x10000,
 font,     0x40, 0,       0x290000,0x170000,
 # note: keep that font start address written in extra_script.py, and the address written above, are in sync.
 # TODO: take the address automatically from the csv file
