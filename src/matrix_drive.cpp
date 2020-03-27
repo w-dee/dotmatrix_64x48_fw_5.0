@@ -14,7 +14,7 @@
 #include "driver/rtc_io.h"
 
 #include "matrix_drive.h"
-
+#include <cmath>
 
 
 #define IO_PWCLK 19
@@ -175,7 +175,7 @@ static void led_post_set_led1642_reg(int reg, uint16_t val)
 /**
  * the frame buffer
  */
-static uint8_t fb[48][64] = {
+static uint8_t DRAM_ATTR fb[48][64] = {
 
 0//#include "matsu.inc"
 
@@ -352,9 +352,10 @@ static void init_dma() {
  */
 static constexpr uint32_t gamma_255_to_4095(int in)
 {
+	using std::pow;
   return /*byte_reverse*/(
   	/*bit_interleave*/(
-  	(uint32_t) (pow((double)(in+20) / (255.0+20), 3.5) * 3800)));  
+  	(uint32_t) (pow((float)(in+20) / (255.0+20), (float)3.5) * 3800)));  
 }
 
 #define G4(N) gamma_255_to_4095((N)), gamma_255_to_4095((N)+1), \
@@ -366,7 +367,7 @@ static constexpr uint32_t gamma_255_to_4095(int in)
 /**
  * Gamma curve table
  */
-static constexpr uint32_t gamma_table[256] = {
+static uint32_t DRAM_ATTR gamma_table[256] = {
 	G64(0) G64(64) G64(128) G64(192)
 	}; // this table must be accessible from interrupt routine;
 	// do not place in FLASH !!
@@ -410,7 +411,7 @@ time frame:
 	The last 256 clocks in a time frame are dead clocks; all leds are off at this period.
 */
 
-static int build_brightness(uint16_t *buf, int row, int n)
+static int IRAM_ATTR build_brightness(uint16_t *buf, int row, int n)
 {
 	// build framebuffer content
 	for(int i = 0; i < NUM_LED1642; ++i)
@@ -444,7 +445,7 @@ static int build_brightness(uint16_t *buf, int row, int n)
 	return NUM_LED1642 * 16;
 } 
 
-static int build_set_led1642_reg(uint16_t *buf, int reg, uint16_t val)
+static int IRAM_ATTR build_set_led1642_reg(uint16_t *buf, int reg, uint16_t val)
 {
 	for(int i = 0; i < NUM_LED1642; ++i)
 	{
@@ -473,7 +474,7 @@ static int build_set_led1642_reg(uint16_t *buf, int reg, uint16_t val)
 
 static volatile int r = 0; // current row
 
-void build_first_half()
+void IRAM_ATTR build_first_half()
 {
 
 	uint16_t *bufp = buf;
@@ -507,7 +508,7 @@ void build_first_half()
 
 
 
-void build_second_half()
+void IRAM_ATTR build_second_half()
 {
 
 	uint16_t *bufp = buf + 2048;
@@ -626,6 +627,8 @@ static void refresh_task(void* arg);
 
 
 void matrix_drive_setup() {
+	Serial.println(F("Matrix LED driver initializing ..."));
+
 
 	for(int y = 0; y < 48; ++y)
 		for(int x = 0; x < 64; ++x)

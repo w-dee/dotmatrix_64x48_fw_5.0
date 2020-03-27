@@ -3,17 +3,20 @@
 #include "spiffs_fs.h"
 #include "settings.h"
 #include "update.h"
+#include "wifi.h"
 
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
-  delay(1000);
+  delay(3000);
 
   init_settings();
   init_fs();
   matrix_drive_setup();
+  wifi_setup();
 
   // find font partition and mmap into the address space
+	Serial.println(F("Compressed BFF font initializing ..."));
   const esp_partition_t * part = updater_t::partition_from_type(updater_t::utFont);
   Serial.printf("Font partition start: 0x%08x, mapped to: ", part->address);
 

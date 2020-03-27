@@ -28,22 +28,28 @@ extern "C" {
 
 using namespace fs;
 
-class SPIFFSImpl : public VFSImpl
+namespace 
 {
-public:
-    SPIFFSImpl();
-    virtual ~SPIFFSImpl() { }
-    virtual bool exists(const char* path);
-};
 
-SPIFFSImpl::SPIFFSImpl()
-{
-}
+    class SPIFFSImpl : public VFSImpl
+    {
+    public:
+        SPIFFSImpl();
+        virtual ~SPIFFSImpl() { }
+        virtual bool exists(const char* path);
+    };
 
-bool SPIFFSImpl::exists(const char* path)
-{
-    File f = open(path, "r");
-    return (f == true) && !f.isDirectory();
+    SPIFFSImpl::SPIFFSImpl()
+    {
+    }
+
+    bool SPIFFSImpl::exists(const char* path)
+    {
+        File f = open(path, "r");
+        return (f == true) && !f.isDirectory();
+    }
+
+
 }
 
 ANY_SPIFFSFS::ANY_SPIFFSFS() : FS(FSImplPtr(new SPIFFSImpl()))
@@ -53,24 +59,55 @@ ANY_SPIFFSFS::ANY_SPIFFSFS() : FS(FSImplPtr(new SPIFFSImpl()))
 
 bool ANY_SPIFFSFS::begin(bool formatOnFail, const char *label, const char * basePath, uint8_t maxOpenFiles)
 {
+    const char *p_label = label ? label : "(default)"; // for print only
+    Serial.printf_P(PSTR("Mounting SPIFFS ... Label:%s\r\n"), p_label);
+
     if(esp_spiffs_mounted(label)){
         log_w("SPIFFS Already Mounted!");
         return true;
     }
 
+
+
     esp_vfs_spiffs_conf_t conf = {
       .base_path = basePath,
       .partition_label = label,
       .max_files = maxOpenFiles,
-      .format_if_mount_failed = formatOnFail
+      .format_if_mount_failed = false
     };
 
     esp_err_t err = esp_vfs_spiffs_register(&conf);
+    if(err == ESP_FAIL && formatOnFail){
+        Serial.printf_P(PSTR("Mounting SPIFFS failed. Retry after formatting ... Label:%s\r\n"), p_label);
+        if(format()){
+            err = esp_vfs_spiffs_register(&conf);
+        }
+    }
     if(err != ESP_OK){
-        log_e("Mounting SPIFFS failed! Error: %d", err);
+        Serial.printf_P(PSTR("Mounting SPIFFS failed! Label:%s Error: %d\r\n"), p_label, err);
+        // TODO: PANIC
         return false;
     }
     _impl->mountpoint(basePath);
+    Serial.printf_P(PSTR("Mounting SPIFFS succeeded. Label:%s\r\n"), p_label);
+ 
+    size_t total,used;
+    if(ESP_OK == esp_spiffs_info(label, &total, &used)){
+        Serial.printf_P(PSTR("Label:%s  Total:%ld  Used:%ld\r\n"), p_label, (long)total, (long)used);
+    }
+
+    return true;
+}
+
+bool ANY_SPIFFSFS::format()
+{
+    disableCore0WDT();
+    esp_err_t err = esp_spiffs_format(NULL);
+    enableCore0WDT();
+    if(err){
+        log_e("Formatting SPIFFS failed! Error: %d", err);
+        return false;
+    }
     return true;
 }
 
@@ -79,6 +116,7 @@ ANY_SPIFFSFS FS; // global instance
 
 void init_fs()
 {
+   	Serial.println(F("Main SPIFFS initializing ..."));
     ::FS.begin(true, nullptr);
 }
 

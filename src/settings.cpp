@@ -5,6 +5,7 @@
 #include "settings.h"
 #include "microtar.h"
 #include "spiffs_fs.h"
+#include <rom/crc.h>
 
 
 static const String SETTINGS_PART_LABEL(F("conf")); // partition label
@@ -14,6 +15,7 @@ fs::ANY_SPIFFSFS SETTINGS_SPIFFS;
 
 void init_settings()
 {
+	Serial.println(F("Settings store initializing ..."));
     SETTINGS_SPIFFS.begin(true, SETTINGS_PART_LABEL.c_str(), SETTINGS_MOUNT_POINT.c_str(), 2);
 }
 
@@ -24,8 +26,6 @@ static constexpr int CHECKSUM_SIZE = sizeof(uint32_t); // in bytes
 //! 0x00000000 or 0xffffffff is not suitable because it is
 //! indistinguishable from all-cleared RAM or all-cleared FLASH ROM.
 static constexpr uint32_t INITIAL_CRC_VALUE = 0x12345678;
-
-extern "C" { uint32_t crc_update(uint32_t crc, const uint8_t *data, size_t length); } // available in eboot_command.c
 
 //! check checksum for a setting.
 //! file pointer is set just after the setting checksum.
@@ -43,7 +43,7 @@ static bool settings_check_crc(File & file)
 	{
 		size_t isz = file.read(ibuf, sizeof(ibuf));
 		if(isz == 0) break;
-		crc = crc_update(crc, ibuf, isz);
+		crc = crc32_le(crc, ibuf, isz);
 	}
 
 	file.seek(CHECKSUM_SIZE); // set file pointer just after the check sum
@@ -83,7 +83,7 @@ bool settings_write(const String & _key, const void * ptr, size_t size, settings
 	if(!file) return false;
 
 	uint32_t crc = INITIAL_CRC_VALUE;
-	crc = crc_update(crc, reinterpret_cast<const uint8_t *>(ptr), size);
+	crc = crc32_le(crc, reinterpret_cast<const uint8_t *>(ptr), size);
 	bool success;
 	success = CHECKSUM_SIZE == file.write(reinterpret_cast<const uint8_t *>(&crc), CHECKSUM_SIZE);
 	if(!success) { file.close(); return false; }
@@ -344,7 +344,7 @@ bool settings_import(const String & target_name)
 				Serial.printf_P(PSTR("File read error.\r\n"));
 				goto error_end; // read error
 			}
-			crc = crc_update(crc, ibuf, one_size);
+			crc = crc32_le(crc, ibuf, one_size);
 			if(one_size != out.write(ibuf, one_size)) goto file_write_error;
 			size -= one_size;
 		}
