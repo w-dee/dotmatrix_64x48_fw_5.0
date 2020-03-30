@@ -14,6 +14,7 @@
 #include "driver/rtc_io.h"
 
 #include "matrix_drive.h"
+#include "frame_buffer.h"
 #include <cmath>
 
 
@@ -172,14 +173,6 @@ static void led_post_set_led1642_reg(int reg, uint16_t val)
 	}
 }
 
-/**
- * the frame buffer
- */
-static uint8_t DRAM_ATTR fb[48][64] = {
-
-0//#include "matsu.inc"
-
-};
 
 static uint16_t *buf;
 #define BUFSZ 4096
@@ -414,12 +407,13 @@ time frame:
 static int IRAM_ATTR build_brightness(uint16_t *buf, int row, int n)
 {
 	// build framebuffer content
+	frame_buffer_t::array_t & array = get_current_frame_buffer().array();
 	for(int i = 0; i < NUM_LED1642; ++i)
 	{
 		int x = i * 8 + (n >> 1);
 		int y = (row << 1) + (n & 1);
 
-		uint16_t br = /*x==y ? 0xaaa: 0;// */gamma_table[fb[y][x]];
+		uint16_t br = /*x==y ? 0xaaa: 0;// */gamma_table[array[y][x]];
 
 		int reg = ( i == NUM_LED1642 - 1 && n == 15) ? 6 : 4; // issue global latch at last transfer
 
@@ -630,9 +624,10 @@ void matrix_drive_setup() {
 	Serial.println(F("Matrix LED driver initializing ..."));
 
 
+	frame_buffer_t::array_t & array = get_current_frame_buffer().array();
 	for(int y = 0; y < 48; ++y)
 		for(int x = 0; x < 64; ++x)
-			fb[y][x] = 255;
+			array[y][x] = 255;
 
 
 	pinMode(IO_PWCLK, OUTPUT);
@@ -734,9 +729,11 @@ static void refresh_task(void* arg) {
   while (1) {
 	delay(20);
 	  step();
+  	frame_buffer_t::array_t & array = get_current_frame_buffer().array();
+
 	for(int y = 0; y < 48; y++)
 	{
-		memcpy(fb[y], buffer[y] + 10, 64);
+		memcpy(array[y], buffer[y] + 10, 64);
 	}
 
   }
