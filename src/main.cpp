@@ -4,6 +4,7 @@
 #include "settings.h"
 #include "update.h"
 #include "wifi.h"
+#include "buttons.h"
 
 void setup() {
   // put your setup code here, to run once:
@@ -35,4 +36,5 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
   matrix_drive_loop();
+  button_update();
 }

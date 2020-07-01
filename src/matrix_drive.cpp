@@ -15,6 +15,7 @@
 
 #include "matrix_drive.h"
 #include "frame_buffer.h"
+#include "buttons.h"
 #include <cmath>
 
 
@@ -559,17 +560,16 @@ void IRAM_ATTR build_second_half()
 
 
 }
-
-static uint8_t button_scan_bits; //!< holds currently pushed button bit-map ('1':pushed)
+uint8_t button_scan_bits; //!< holds currently pushed button bit-map ('1':pushed)
 static void IRAM_ATTR scan_button()
 {
 	int btn_num = r - 1; // 'r' represents currently buffering row, so subtract 1 from it
-	if(btn_num >= 0 && btn_num < NUM_BUTTONS)
+	if(btn_num >= 0 && btn_num < MAX_BUTTONS)
 	{
-		uint8_t mask = 1 << btn_num;
-		uint8_t tmp = button_scan_bits;
+		typeof(button_scan_bits) mask = 1 << btn_num;
+		typeof(button_scan_bits) tmp = button_scan_bits;
 		tmp &= ~mask;
-		if(digitalRead(NUM_BUTTONS))
+		if(!digitalRead(IO_BUTTONSENSE))
 			tmp |= mask;
 		button_scan_bits = tmp;
 	}
@@ -612,8 +612,7 @@ static void IRAM_ATTR i2s_int_hdl(void *arg) {
 
 
 void matrix_drive_loop() {
-	Serial.printf("buttons:%d\r\n", (int)button_scan_bits);
-	delay(1000);
+	/* nothing */
 }
 
 
@@ -637,6 +636,7 @@ void matrix_drive_setup() {
 	pinMode(IO_ROWLATCH, OUTPUT);
 	pinMode(IO_HC585SEROUT, INPUT);
 	pinMode(IO_LED1642_RST, OUTPUT);
+	pinMode(IO_BUTTONSENSE, INPUT);
 
 	led_gpio_set_low();
 
