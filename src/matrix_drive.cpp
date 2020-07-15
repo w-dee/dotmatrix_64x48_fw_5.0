@@ -71,7 +71,7 @@ static uint32_t led_lfsr(uint32_t lfsr)
 
 static void led_print_0_1(int v)
 {
-	if(v) Serial.print(F("1")); else Serial.print(F("0"));
+	if(v) putchar('1'); else putchar('0');
 }
 
 static void led_post()
@@ -80,9 +80,9 @@ static void led_post()
 	constexpr int num_bits = 16*8 + 8*3;
 	uint32_t lfsr = 0xabcd0123;
 
-	Serial.println(F("LED matrix driver: Checking serial data path ..."));
+	puts("LED matrix driver: Checking serial data path ...");
 
-	Serial.print(F("sent    :"));
+	puts("sent    :");
 	// shift in test pattern into the shift register.
 	for(int i = 0; i < num_bits; ++i)
 	{
@@ -96,10 +96,10 @@ static void led_post()
 		digitalWrite(IO_COLCLK, 0);
 		lfsr = led_lfsr(lfsr);
 	}
-	Serial.print(F("\r\n"));
+	puts("");
 
 	lfsr = 0xabcd0123;
-	Serial.print(F("received:"));
+	puts("received:");
 	bool error = false;
 	for(int i = 0; i < num_bits; ++i)
 	{
@@ -120,16 +120,15 @@ static void led_post()
 		digitalWrite(IO_COLCLK, 0);
 		lfsr = led_lfsr(lfsr);
 	}
-
-	Serial.print(F("\r\n"));
+	puts("");
 
 	if(error)
 	{
-		Serial.print(F("Error found\r\n"));
+		puts("Error found");
 	}
 	else
 	{
-		Serial.print(F("No error found\r\n"));
+		puts("No error found");
 	}
 
 }
@@ -149,7 +148,7 @@ static void led_post_set_led1642_reg(int reg, uint16_t val)
 			// set bit
 			digitalWrite(IO_COLSER, !!(val & (1<<bit)));
 /*
-		Serial.printf("%2d:%2d:%d:%d:%d:%d:%d:%d:%d:%d\r\n",
+		printf("%2d:%2d:%d:%d:%d:%d:%d:%d:%d:%d\r\n",
 			i, bit, !!(val & (1<<bit)), digitalRead(IO_HC585SEROUT),
 			digitalRead(25),
 			digitalRead(26),
@@ -620,7 +619,7 @@ static void refresh_task(void* arg);
 
 
 void matrix_drive_setup() {
-	Serial.println(F("Matrix LED driver initializing ..."));
+	puts("Matrix LED driver initializing ...");
 
 
 	frame_buffer_t::array_t & array = get_current_frame_buffer().array();

@@ -15,7 +15,7 @@ fs::ANY_SPIFFSFS SETTINGS_SPIFFS;
 
 void init_settings()
 {
-	Serial.println(F("Settings store initializing ..."));
+	puts("Settings store initializing ...");
     SETTINGS_SPIFFS.begin(true, SETTINGS_PART_LABEL.c_str(), SETTINGS_MOUNT_POINT.c_str(), 2);
 }
 
@@ -48,7 +48,7 @@ static bool settings_check_crc(File & file)
 
 	file.seek(CHECKSUM_SIZE); // set file pointer just after the check sum
 
-//	Serial.printf_P(PSTR("file checksum: %08x   computed checksum: %08x\r\n"), file_crc, crc); 
+//	printf("file checksum: %08x   computed checksum: %08x\r\n", file_crc, crc); 
 	return crc == file_crc;
 }
 
@@ -243,13 +243,13 @@ bool settings_export(const String & target_name,
 		goto error_end; // open error
 
 	// scan settings directory
-	Serial.printf_P(PSTR("Scanning dir ... \r\n"));
+	puts("Scanning dir ...");
 	dir = FS.open(rootstr);
 	while(!!(in = dir.openNextFile()))
 	{
 		// skip excluded file name
 		String filename = dir.name();
-		Serial.printf_P(PSTR("Exporting setting %s ... \r\n"), filename.c_str());
+		printf("Exporting setting %s ... \r\n", filename.c_str());
 		if(exclude_prefix.length() != 0 &&
 			filename.startsWith(exclude_prefix)) continue;
 
@@ -272,7 +272,7 @@ bool settings_export(const String & target_name,
 				goto error_end; // write error
 		}
 	}
-	Serial.printf_P(PSTR("Done scanning dir.\r\n"));
+	puts("Done scanning dir.");
 
 	mtar_finalize(p_tar);
 	mtar_close(p_tar);
@@ -307,7 +307,7 @@ bool settings_import(const String & target_name)
 	res = mtar_open(p_tar, target_name.c_str(), rmode);
 	if(MTAR_ESUCCESS != res)
 	{
-		Serial.printf_P(PSTR("mtar_open() failed. code=%d\r\n"), res);
+		printf("mtar_open() failed. code=%d\r\n", res);
 		goto error_end; // open error
 	}
 
@@ -316,7 +316,7 @@ bool settings_import(const String & target_name)
 	{
 		// extract basename of the filename
 		String fn = p_h->name;
-		Serial.printf_P(PSTR("Processing %s ...\r\n"), fn.c_str());
+		printf("Processing %s ...", fn.c_str());
 		int last_slash = fn.lastIndexOf('/');
 		if(last_slash != -1)
 			fn = fn.c_str() + last_slash + 1; // extract basename
@@ -341,7 +341,7 @@ bool settings_import(const String & target_name)
 			if(one_size == 0) break;
 			if(MTAR_ESUCCESS != mtar_read_data(p_tar, ibuf, one_size))
 			{
-				Serial.printf_P(PSTR("File read error.\r\n"));
+				puts("File read error.");
 				goto error_end; // read error
 			}
 			crc = crc32_le(crc, ibuf, one_size);
@@ -366,14 +366,14 @@ bool settings_import(const String & target_name)
 
 	if(processed_files == 0)
 	{
-		Serial.printf_P(PSTR("No setting items processed.\r\n"));
+		puts("No setting items processed.");
 		return false;
 	}
 
 	return true;
 
 file_write_error:
-	Serial.printf_P(PSTR("File write error.\r\n"));
+	puts("File write error.");
 
 error_end:
 	if(p_tar) delete p_tar;

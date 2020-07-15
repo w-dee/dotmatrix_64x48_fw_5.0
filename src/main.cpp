@@ -5,21 +5,22 @@
 #include "update.h"
 #include "wifi.h"
 #include "buttons.h"
+#include "mz_console.h"
 
 void setup() {
   // put your setup code here, to run once:
-  Serial.begin(115200);
   delay(3000);
 
+  init_console();
   init_settings();
   init_fs();
   matrix_drive_setup();
   wifi_setup();
 
   // find font partition and mmap into the address space
-	Serial.println(F("Compressed BFF font initializing ..."));
+	puts("Compressed BFF font initializing ...");
   const esp_partition_t * part = updater_t::partition_from_type(updater_t::utFont);
-  Serial.printf("Font partition start: 0x%08x, mapped to: ", part->address);
+  printf("Font partition start: 0x%08x, mapped to: ", part->address);
 
   const void *map_ptr;
   spi_flash_mmap_handle_t map_handle;
@@ -29,8 +30,10 @@ void setup() {
   }
 
   const uint8_t * ptr = static_cast<const uint8_t *>(map_ptr);
-  Serial.printf("%p\n", ptr);
-  Serial.printf("Font data magic: %02x %02x %02x %02x\n", ptr[0], ptr[1], ptr[2], ptr[3]);
+  printf("%p\r\n", ptr);
+  printf("Font data magic: %02x %02x %02x %02x\r\n", ptr[0], ptr[1], ptr[2], ptr[3]);
+
+
 }
 
 void loop() {

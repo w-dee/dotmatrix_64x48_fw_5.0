@@ -56,17 +56,17 @@ void bff_font_t::begin(uint32_t start_addr)
 	uint8_t buf[8];
 	if(8 != file.read(buf, 8))
 	{
-		Serial.println(F("Error read font file\r\n"));
+		puts("Error read font file");
 		goto error;
 	}
 
 	if(memcmp_P(buf, PSTR("BFF\0\x02\0\0\0"), 8))
 	{
-		Serial.println(F("Font signature not found; Forgot uploading font file ??\r\n signature:"));
+		puts("Font signature not found; Forgot uploading font file ??\r\n signature:");
 		for(auto c : buf) {
-			Serial.printf("%02x ", c);
+			printf("%02x ", c);
 		}
-		Serial.println(F(""));
+		puts("");
 		goto error;
 	}
 
@@ -117,13 +117,13 @@ void bff_font_t::begin(uint32_t start_addr)
 	// calc num_glyphs
 	num_glyphs = chrm_size / (4*8); // chrm (char map)'s each record is 32byte
 
-Serial.printf_P(PSTR("Font nominal height: %d\r\n"), nominal_height);
-Serial.printf_P(PSTR("Font num_glyphs    : %d\r\n"), num_glyphs);
+printf("Font nominal height: %d\r\n", nominal_height);
+printf("Font num_glyphs    : %d\r\n", num_glyphs);
 	available = true;
 
 	return;
 error:
-Serial.printf_P(PSTR("Error opening glyph\r\n"));
+puts("Error opening glyph");
 	file.close();
 
 }
@@ -340,7 +340,7 @@ void bff_font_t::put(int32_t chr, int level, int x, int y, frame_buffer_t & fb) 
 	for(int yy = y; yy < h+y; ++yy, ++fy)
 	{
 		const uint8_t * line = p + fy * bb_w;
-//		Serial.printf("line %d: %02x\r\n", fy, line);
+//		printf("line %d: %02x\r\n", fy, line);
 		int fxx = fx;
 		for(int xx = x; xx < w+x; ++xx, ++fxx)
 		{

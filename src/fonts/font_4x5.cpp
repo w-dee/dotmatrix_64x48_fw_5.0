@@ -233,13 +233,13 @@ void font_4x5_t::put(int32_t chr, int level, int x, int y, frame_buffer_t & fb) 
 	for(int yy = y; yy < h+y; ++yy, ++fy)
 	{
 		unsigned char line = pgm_read_byte(p->bitmap + fy);
-//		Serial.printf("line %d: %02x\r\n", fy, line);
+//		printf("line %d: %02x\r\n", fy, line);
 		int fxx = fx;
 		for(int xx = x; xx < w+x; ++xx, ++fxx)
 		{
 			if(line & (1<<(7-fxx)))
 			{
-//				Serial.printf("%d %d %d %d \r\n", fxx, fy, xx, yy);
+//				printf("%d %d %d %d \r\n", fxx, fy, xx, yy);
 				fb.set_point(xx, yy, level);
 			}
 		}

@@ -42,19 +42,22 @@ static String wpspin2string(uint8_t a[]){
 static void WiFiEvent(WiFiEvent_t event, system_event_info_t info){
   switch(event){
     case SYSTEM_EVENT_STA_START:
-      Serial.println("Station Mode Started");
+      puts("Station Mode Started");
       break;
+
     case SYSTEM_EVENT_STA_GOT_IP:
-      Serial.println("Connected to :" + String(WiFi.SSID()));
-      Serial.print("Got IP: ");
-      Serial.println(WiFi.localIP());
+	  printf("Connected to : %s\r\n", String(WiFi.SSID()).c_str() );
+      printf("Got IPv4: %s\r\n", WiFi.localIP().toString().c_str() );
+//      printf("Got IPv6: %s\r\n", WiFi.localIPv6().toString().c_str() );
       break;
+
     case SYSTEM_EVENT_STA_DISCONNECTED:
-      Serial.println("Disconnected from station, attempting reconnection");
+      puts("Disconnected from station, attempting reconnection");
       WiFi.reconnect();
       break;
+
     case SYSTEM_EVENT_STA_WPS_ER_SUCCESS:
-      Serial.println("WPS Successfull, stopping WPS and connecting to: " + String(WiFi.SSID()));
+      printf("WPS Successfull, stopping WPS and connecting to: %s\r\n", String(WiFi.SSID()).c_str() );
       esp_wifi_wps_disable();
 
 		delay(10);
@@ -71,15 +74,15 @@ static void WiFiEvent(WiFiEvent_t event, system_event_info_t info){
       WiFi.begin();
       break;
     case SYSTEM_EVENT_STA_WPS_ER_FAILED:
-      Serial.println("WPS Failed.");
+      puts("WPS Failed.");
       esp_wifi_wps_disable();
       break;
     case SYSTEM_EVENT_STA_WPS_ER_TIMEOUT:
-      Serial.println("WPS Timedout.");
+      puts("WPS Timedout.");
       esp_wifi_wps_disable();
       break;
     case SYSTEM_EVENT_STA_WPS_ER_PIN:
-      Serial.println("WPS_PIN = " + wpspin2string(info.sta_er_pin.pin_code));
+      printf("WPS_PIN = %s\r\n", wpspin2string(info.sta_er_pin.pin_code).c_str());
       break;
     default:
       break;
@@ -91,7 +94,7 @@ static void WiFiEvent(WiFiEvent_t event, system_event_info_t info){
 static void wifi_init_settings();
 void wifi_setup()
 {
-	Serial.println(F("WiFi initializing ..."));
+	puts("WiFi initializing ...");
 
 	// check settings fs
 	wifi_init_settings();
@@ -120,12 +123,10 @@ void wifi_check()
 	if(wifi_last_status != st)
 	{
 		wifi_last_status = st;
-		Serial.print('\r');
-		Serial.print('\n');
+		puts("");
 		String m = wifi_get_connection_info_string();
-		Serial.print(m.c_str());
-		Serial.print('\r');
-		Serial.print('\n');
+		printf("%s", m.c_str());
+		puts("");
 	}
 }
 
@@ -160,7 +161,7 @@ void wifi_wps()
  */
 void wifi_start()
 {
-	Serial.println(F("Starting WiFi ..."));
+	puts("Starting WiFi ...");
 
 	WiFi.mode(WIFI_OFF);
 	WiFi.setAutoReconnect(true);

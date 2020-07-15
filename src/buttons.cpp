@@ -72,7 +72,7 @@ void button_update()
 	uint32_t buttons = button_get();
 	if(buttons)
 	{
-		Serial.printf("Button: %x\r\n", buttons);
+		printf("Button: %x\r\n", buttons);
 	}
 }
 

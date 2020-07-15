@@ -60,7 +60,7 @@ ANY_SPIFFSFS::ANY_SPIFFSFS() : FS(FSImplPtr(new SPIFFSImpl()))
 bool ANY_SPIFFSFS::begin(bool formatOnFail, const char *label, const char * basePath, uint8_t maxOpenFiles)
 {
     const char *p_label = label ? label : "(default)"; // for print only
-    Serial.printf_P(PSTR("Mounting SPIFFS ... Label:%s\r\n"), p_label);
+    printf("Mounting SPIFFS ... Label:%s\r\n", p_label);
 
     if(esp_spiffs_mounted(label)){
         log_w("SPIFFS Already Mounted!");
@@ -78,22 +78,22 @@ bool ANY_SPIFFSFS::begin(bool formatOnFail, const char *label, const char * base
 
     esp_err_t err = esp_vfs_spiffs_register(&conf);
     if(err == ESP_FAIL && formatOnFail){
-        Serial.printf_P(PSTR("Mounting SPIFFS failed. Retry after formatting ... Label:%s\r\n"), p_label);
+        printf("Mounting SPIFFS failed. Retry after formatting ... Label:%s\r\n", p_label);
         if(format()){
             err = esp_vfs_spiffs_register(&conf);
         }
     }
     if(err != ESP_OK){
-        Serial.printf_P(PSTR("Mounting SPIFFS failed! Label:%s Error: %d\r\n"), p_label, err);
+        printf("Mounting SPIFFS failed! Label:%s Error: %d\r\n", p_label, err);
         // TODO: PANIC
         return false;
     }
     _impl->mountpoint(basePath);
-    Serial.printf_P(PSTR("Mounting SPIFFS succeeded. Label:%s\r\n"), p_label);
+    printf("Mounting SPIFFS succeeded. Label:%s\r\n", p_label);
  
     size_t total,used;
     if(ESP_OK == esp_spiffs_info(label, &total, &used)){
-        Serial.printf_P(PSTR("Label:%s  Total:%ld  Used:%ld\r\n"), p_label, (long)total, (long)used);
+        printf("Label:%s  Total:%ld  Used:%ld\r\n", p_label, (long)total, (long)used);
     }
 
     return true;
@@ -116,7 +116,7 @@ ANY_SPIFFSFS FS; // global instance
 
 void init_fs()
 {
-   	Serial.println(F("Main SPIFFS initializing ..."));
+   	puts("Main SPIFFS initializing ...");
     ::FS.begin(true, nullptr);
 }
 
