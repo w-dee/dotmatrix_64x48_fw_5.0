@@ -34,10 +34,13 @@ void setup() {
   printf("Font data magic: %02x %02x %02x %02x\r\n", ptr[0], ptr[1], ptr[2], ptr[3]);
 
 
+
+  begin_console();
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
   matrix_drive_loop();
   button_update();
+  poll_console();
 }
