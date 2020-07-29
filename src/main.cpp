@@ -6,6 +6,7 @@
 #include "wifi.h"
 #include "buttons.h"
 #include "mz_console.h"
+#include "threadsync.h"
 
 void setup() {
   // put your setup code here, to run once:
@@ -42,5 +43,5 @@ void loop() {
   // put your main code here, to run repeatedly:
   matrix_drive_loop();
   button_update();
-  poll_console();
+  poll_main_thread_queue();
 }

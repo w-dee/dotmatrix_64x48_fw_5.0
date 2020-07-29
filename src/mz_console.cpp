@@ -9,12 +9,8 @@
 #include "linenoise/linenoise.h"
 #include "argtable3/argtable3.h"
 #include "esp_vfs_fat.h"
+#include "threadsync.h"
 
-static portMUX_TYPE s_commandline_spinlock = portMUX_INITIALIZER_UNLOCKED;
-	// XXX: is spinlock suitable waiting for relatively long time
-	// (for instance, waiting for the command execution getting done)
-
-static String LastLine;
 
 static void console_task(void *)
 {
@@ -24,84 +20,66 @@ static void console_task(void *)
 
 		if((line = linenoise("> ")) != NULL) {
 			linenoiseHistoryAdd(line);
-			portENTER_CRITICAL(&s_commandline_spinlock);
-			LastLine = line;
-			portEXIT_CRITICAL(&s_commandline_spinlock);
 
-			// wait for command execution done
-			for(;;)
-			{
-				bool done = false;
-				portENTER_CRITICAL(&s_commandline_spinlock);
-				if(LastLine.isEmpty()) done = true;
-				portEXIT_CRITICAL(&s_commandline_spinlock);
-				if(done) break;
-				vTaskDelay(10);
-			}
+			//printf("got: %s\r\n", LastLine.c_str());
+			int ret_val = 0;
+			esp_console_run(line, &ret_val);
 
 			linenoiseFree(line); 
 		}
 	}
 }
 
-/**
- * polling function; call this function in main thread
- * */
-static void poll_process_line()
+
+namespace cmd_wifi
 {
-	bool available = false;
-	portENTER_CRITICAL(&s_commandline_spinlock);
-	if(!LastLine.isEmpty()) available = true;	
-	portEXIT_CRITICAL(&s_commandline_spinlock);
-	if(!available) return;
+	static struct arg_lit *verb, *help, *version;
+	static struct arg_int *level;
+	static struct arg_file *o, *file;
+	static struct arg_end *end;
+	static void *argtable[] = {
+			help    = arg_litn(NULL, "help", 0, 1, "display this help and exit"),
+			version = arg_litn(NULL, "version", 0, 1, "display version info and exit"),
+			level   = arg_intn(NULL, "level", "<n>", 0, 1, "foo value"),
+			verb    = arg_litn("v", "verbose", 0, 1, "verbose output"),
+			o       = arg_filen("o", NULL, "myfile", 0, 1, "output file"),
+			file    = arg_filen(NULL, NULL, "<file>", 1, 100, "input files"),
+			end     = arg_end(20),
+		};
 
-	//printf("got: %s\r\n", LastLine.c_str());
-	int ret_val = 0;
-	esp_console_run(LastLine.c_str(), &ret_val);
+	static int f0(int argc, char **argv)
+	{
+		run_in_main_thread([] () {
+			printf("f0 called\r\n");
+			printf("Usage: %s", "f0");
+			arg_print_syntax(stdout, argtable, "\n");
+			printf("Demonstrate command-line parsing in argtable3.\n\n");
+			arg_print_glossary(stdout, argtable, "  %-25s %s\n");
+			return 0;
+		});
+		return 0;
+	}
 
-	portENTER_CRITICAL(&s_commandline_spinlock);
-	LastLine.clear(); // give control to command line input 
-	portEXIT_CRITICAL(&s_commandline_spinlock);
-}
+	static void init()
+	{
+		esp_console_cmd_t cmd;
+
+		cmd.command = "hello";
+		cmd.help = "hello";
+		cmd.hint = "hint text";
+		cmd.func = f0;
+		cmd.argtable = argtable;
+
+		esp_console_cmd_register(&cmd);
+	}
+};
 
 
-static struct arg_lit *verb, *help, *version;
-static struct arg_int *level;
-static struct arg_file *o, *file;
-static struct arg_end *end;
-static void *argtable[] = {
-        help    = arg_litn(NULL, "help", 0, 1, "display this help and exit"),
-        version = arg_litn(NULL, "version", 0, 1, "display version info and exit"),
-        level   = arg_intn(NULL, "level", "<n>", 0, 1, "foo value"),
-        verb    = arg_litn("v", "verbose", 0, 1, "verbose output"),
-        o       = arg_filen("o", NULL, "myfile", 0, 1, "output file"),
-        file    = arg_filen(NULL, NULL, "<file>", 1, 100, "input files"),
-        end     = arg_end(20),
-    };
-
-
-static int f0(int argc, char **argv)
-{
-	printf("f0 called\r\n");
-    printf("Usage: %s", "f0");
-    arg_print_syntax(stdout, argtable, "\n");
-    printf("Demonstrate command-line parsing in argtable3.\n\n");
-    arg_print_glossary(stdout, argtable, "  %-25s %s\n");
-	return 0;
-}
 
 static void initialize_commands()
 {
-	esp_console_cmd_t cmd;
-
-	cmd.command = "hello";
-	cmd.help = "hello";
-	cmd.hint = "hint text";
-	cmd.func = f0;
-	cmd.argtable = argtable;
-
-	esp_console_cmd_register(&cmd);
-
+	esp_console_register_help_command();
+	cmd_wifi::init();
 }
 
 void init_console()
@@ -166,7 +144,3 @@ void begin_console()
 	      nullptr); /* Task handle to keep track of created task */
 }
 
-void poll_console()
-{
-	poll_process_line();
-}
