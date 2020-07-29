@@ -10,6 +10,7 @@
 #include "argtable3/argtable3.h"
 #include "esp_vfs_fat.h"
 #include "threadsync.h"
+#include "wifi.h"
 
 
 static void console_task(void *)
@@ -31,30 +32,43 @@ static void console_task(void *)
 }
 
 
-namespace cmd_wifi
+namespace cmd_wifi_status
 {
-	static struct arg_lit *verb, *help, *version;
-	static struct arg_int *level;
-	static struct arg_file *o, *file;
+	static const char * cmd_name ="wifi-status";
+	static const char * cmd_hint = "display WiFi status";
+	static struct arg_lit *help;
+	static struct arg_lit *i_am_safe;
 	static struct arg_end *end;
 	static void *argtable[] = {
-			help    = arg_litn(NULL, "help", 0, 1, "display this help and exit"),
-			version = arg_litn(NULL, "version", 0, 1, "display version info and exit"),
-			level   = arg_intn(NULL, "level", "<n>", 0, 1, "foo value"),
-			verb    = arg_litn("v", "verbose", 0, 1, "verbose output"),
-			o       = arg_filen("o", NULL, "myfile", 0, 1, "output file"),
-			file    = arg_filen(NULL, NULL, "<file>", 1, 100, "input files"),
-			end     = arg_end(20),
+ 		    help      = arg_litn(NULL, "help", 0, 1, "display help and exit"),
+ 			i_am_safe = arg_litn(nullptr, "i-am-safe", 0, 1, "show non-masked password"),
+			end       = arg_end(5),
 		};
 
 	static int f0(int argc, char **argv)
 	{
-		run_in_main_thread([] () {
-			printf("f0 called\r\n");
-			printf("Usage: %s", "f0");
+
+    	int nerrors;
+	    nerrors = arg_parse(argc,argv,argtable);
+		if(help->count > 0)
+		{
+			printf("Usage: %s", cmd_name);
 			arg_print_syntax(stdout, argtable, "\n");
-			printf("Demonstrate command-line parsing in argtable3.\n\n");
+			printf("%s.\n\n", cmd_hint);
 			arg_print_glossary(stdout, argtable, "  %-25s %s\n");
+			return 0;
+		}
+
+		if (nerrors > 0)
+		{
+			/* Display the error details contained in the arg_end struct.*/
+			arg_print_errors(stdout, end, cmd_name);
+			printf("Try '%s --help' for more information.\n", cmd_name);
+			return 0;
+		}
+
+		run_in_main_thread([] () {
+			printf("%s\n", wifi_get_connection_info_string().c_str());
 			return 0;
 		});
 		return 0;
@@ -64,9 +78,9 @@ namespace cmd_wifi
 	{
 		esp_console_cmd_t cmd;
 
-		cmd.command = "hello";
-		cmd.help = "hello";
-		cmd.hint = "hint text";
+		cmd.command = cmd_name;
+		cmd.help = cmd_hint;
+		cmd.hint = nullptr;
 		cmd.func = f0;
 		cmd.argtable = argtable;
 
@@ -79,7 +93,7 @@ namespace cmd_wifi
 static void initialize_commands()
 {
 	esp_console_register_help_command();
-	cmd_wifi::init();
+	cmd_wifi_status::init();
 }
 
 void init_console()
