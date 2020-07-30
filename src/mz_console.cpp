@@ -3,19 +3,18 @@
 #include "esp_console.h"
 #include "esp_system.h"
 #include "esp_log.h"
-#include "esp_console.h"
 #include "esp_vfs_dev.h"
 #include "driver/uart.h"
 #include "linenoise/linenoise.h"
 #include "argtable3/argtable3.h"
 #include "esp_vfs_fat.h"
 #include "threadsync.h"
-#include "wifi.h"
+
 
 
 static void console_task(void *)
 {
-	// Note, this function is to be run inside separete thread;
+	// Note, this function is to be run inside separete thread
 	char *line;
 	for(;;) {
 
@@ -24,7 +23,11 @@ static void console_task(void *)
 
 			//printf("got: %s\r\n", LastLine.c_str());
 			int ret_val = 0;
-			esp_console_run(line, &ret_val);
+			esp_err_t err = esp_console_run(line, &ret_val);
+			if(err == ESP_ERR_NOT_FOUND)
+			{
+				printf("Command not found. Type 'help' to show help.\n");
+			}
 
 			linenoiseFree(line); 
 		}
@@ -32,68 +35,12 @@ static void console_task(void *)
 }
 
 
-namespace cmd_wifi_status
-{
-	static const char * cmd_name ="wifi-status";
-	static const char * cmd_hint = "display WiFi status";
-	static struct arg_lit *help;
-	static struct arg_lit *i_am_safe;
-	static struct arg_end *end;
-	static void *argtable[] = {
- 		    help      = arg_litn(NULL, "help", 0, 1, "display help and exit"),
- 			i_am_safe = arg_litn(nullptr, "i-am-safe", 0, 1, "show non-masked password"),
-			end       = arg_end(5),
-		};
-
-	static int f0(int argc, char **argv)
-	{
-
-    	int nerrors;
-	    nerrors = arg_parse(argc,argv,argtable);
-		if(help->count > 0)
-		{
-			printf("Usage: %s", cmd_name);
-			arg_print_syntax(stdout, argtable, "\n");
-			printf("%s.\n\n", cmd_hint);
-			arg_print_glossary(stdout, argtable, "  %-25s %s\n");
-			return 0;
-		}
-
-		if (nerrors > 0)
-		{
-			/* Display the error details contained in the arg_end struct.*/
-			arg_print_errors(stdout, end, cmd_name);
-			printf("Try '%s --help' for more information.\n", cmd_name);
-			return 0;
-		}
-
-		run_in_main_thread([] () {
-			printf("%s\n", wifi_get_connection_info_string().c_str());
-			return 0;
-		});
-		return 0;
-	}
-
-	static void init()
-	{
-		esp_console_cmd_t cmd;
-
-		cmd.command = cmd_name;
-		cmd.help = cmd_hint;
-		cmd.hint = nullptr;
-		cmd.func = f0;
-		cmd.argtable = argtable;
-
-		esp_console_cmd_register(&cmd);
-	}
-};
-
-
+void init_console_commands(); // in console_commands.cpp
 
 static void initialize_commands()
 {
 	esp_console_register_help_command();
-	cmd_wifi_status::init();
+	init_console_commands();
 }
 
 void init_console()
