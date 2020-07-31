@@ -136,7 +136,7 @@ namespace cmd_wifi_ip
 {
     struct arg_lit *help, *dhcp;
     struct arg_str *address, *gw, *mask, *dns;
-    struct arg_end *end = arg_end(5);
+    struct arg_end *end;
     void * argtable[] = {
             help =    arg_litn(NULL, "help", 0, 1, "Display help and exit"),
             dhcp =    arg_litn("d",  "dhcp", 0, 1, "Use DHCP"),
@@ -231,7 +231,7 @@ namespace cmd_wifi_ap
 {
     struct arg_lit *help;
     struct arg_str *ssid, *psk;
-    struct arg_end *end = arg_end(5);
+    struct arg_end *end;
     void * argtable[] = {
             help =    arg_litn(NULL, "help", 0, 1, "Display help and exit"),
             ssid =    arg_strn("s",  "ssid",   "<SSID>", 1, 1, "SSID name"),
