@@ -11,12 +11,41 @@
 #include "threadsync.h"
 
 static const char * const history_file_name = "/settings/.history";
+static bool dumb_mode = true;
+
+/**
+ * Check whether the connected terminal is capable of line editing
+ * */
+void console_probe()
+{
+	if (linenoiseProbe()) { /* zero indicates success */
+          printf("\n"
+	    "Your terminal application does not support escape sequences.\n"
+	    "Line editing and history features are disabled.\n"
+	    "On linux , try screen.\n"
+	    "On Windows, try using Putty instead.\n");
+          linenoiseSetDumbMode(1);
+		dumb_mode = true;
+  	}
+	else
+	{
+        printf("Line editing and history features enabled.\n");
+		linenoiseSetDumbMode(0);
+		dumb_mode = false;
+	}
+}
+
+
 
 static void console_task(void *)
 {
 	// Note, this function is to be run inside separete thread
 	char *line;
 	for(;;) {
+		if(dumb_mode)
+			printf("\n"
+			"info: Command line editing and history features are currently disabled.\n"
+			"info: Try 't<enter>' to enable command line editing and history.\n");
 
 		if((line = linenoise("> ")) != NULL) {
 			linenoiseHistoryAdd(line);
@@ -88,15 +117,7 @@ void init_console()
 
 void begin_console()
 {
-	if (linenoiseProbe()) { /* zero indicates success */
-          printf("\n"
-	    "Your terminal application does not support escape sequences.\n"
-	    "Line editing and history features are disabled.\n"
-	    "On linux , try screen.\n"
-	    "On Windows, try using Putty instead.\n");
-          linenoiseSetDumbMode(1);
-  	}
-
+	console_probe();
 
 	xTaskCreate(
 	      console_task,           /* Task function. */

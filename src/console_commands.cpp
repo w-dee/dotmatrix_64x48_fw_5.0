@@ -1,5 +1,6 @@
 #include <functional>
 #include <vector>
+#include "mz_console.h"
 #include "wifi.h"
 #include "esp_console.h"
 #include "esp_system.h"
@@ -243,10 +244,33 @@ namespace cmd_wifi_ip
     };
 }
 
+namespace cmd_t
+{
+    struct arg_lit *help = arg_litn(NULL, "help", 0, 1, "Display help and exit");
+    struct arg_end *end = arg_end(5);
+    void * argtable[] = { help, end };
+
+    class _cmd : public cmd_base_t
+    {
+
+    public:
+        _cmd() : cmd_base_t("t", "Try to enable line edit / history", argtable) {}
+
+    private:
+        int func(int argc, char **argv)
+        {
+            return run_in_main_thread([] () -> int {
+                console_probe();
+                return 0;
+            }) ;       
+        }
+    };
+}
 
 
 void init_console_commands()
 {
-    {static cmd_wifi_show::_cmd cmd;}
-    {static cmd_wifi_ip::_cmd cmd;}
+    static cmd_wifi_show::_cmd wifi_show_cmd;
+    static cmd_wifi_ip::_cmd wifi_ip_cmd;
+    static cmd_t::_cmd t_cmd;
 }
