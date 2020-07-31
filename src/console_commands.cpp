@@ -13,6 +13,9 @@ static std::vector<cmd_base_t*> commands;
 
 static int generic_handler(int argc, char **argv);
 
+/**
+ * base class for command handler
+ * */
 class cmd_base_t
 {
     const char * name;
@@ -22,6 +25,9 @@ class cmd_base_t
     virtual int func(int argc, char **argv) = 0;
 
 protected:
+    /**
+     * Show usage
+     * */
     void usage()
     {
         printf("Usage: %s", name);
@@ -31,6 +37,9 @@ protected:
     }
 
 private:
+    /**
+     * Common command handler
+     * */
     int handler(int argc, char **argv)
     {
         int nerrors;
@@ -57,12 +66,19 @@ private:
         return func(argc, argv);
     }
 
+    /**
+     * returns whether the parameter p is the name of this command
+     * */
     bool are_you(const char *p) const
     {
         return !strcmp(name, p);
     }
 
 public:
+    /**
+     * The constructor.
+     * _argtable is an argtable array. The first item must be the help.
+     * */
     cmd_base_t(const char *_name, const char *_hint, void ** const _argtable) :
         name(_name), hint(_hint), at(_argtable)
     {
@@ -83,13 +99,16 @@ public:
     friend int generic_handler(int argc, char **argv);
 };
 
-// because ESP-IDF's esp_console_cmd_func_t does not include
-// any user pointer, there is no method to know from the
-// handler that which command is invoked. Fortunately
-// argv[0] contains command name itself
-// so check the list. bullshit.
+/**
+ * Generic command handler wrapper
+ * */
 static int generic_handler(int argc, char **argv)
 {
+    // because ESP-IDF's esp_console_cmd_func_t does not include
+    // any user pointer, there is no method to know from the
+    // handler that which command is invoked. Fortunately
+    // argv[0] contains command name itself
+    // so check the list. bullshit.
     for(auto && cmd : commands)
     {
         if(cmd->are_you(argv[0])) { return cmd->handler(argc, argv); }
@@ -98,6 +117,10 @@ static int generic_handler(int argc, char **argv)
 }
 
 // command handlers --------------------------------------------------
+// command handlers should be contained in each namespace,
+// to ease access to the static arg_XXX * items.
+
+
 namespace cmd_wifi_show
 {
     struct arg_lit *help = arg_litn(NULL, "help", 0, 1, "Display help and exit");
@@ -281,7 +304,11 @@ namespace cmd_t
     };
 }
 
-
+/**
+ * Initialize console commands.
+ * This must be called after other static variable initialization,
+ * before using the command line interpreter.
+ * */
 void init_console_commands()
 {
     static cmd_wifi_show::_cmd wifi_show_cmd;

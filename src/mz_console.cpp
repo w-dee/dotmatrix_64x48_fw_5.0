@@ -13,9 +13,6 @@
 static const char * const history_file_name = "/settings/.history";
 static bool dumb_mode = true;
 
-/**
- * Check whether the connected terminal is capable of line editing
- * */
 void console_probe()
 {
 	if (linenoiseProbe()) { /* zero indicates success */
@@ -115,8 +112,16 @@ void init_console()
 	initialize_commands();
 }
 
+
+static void load_console_history()
+{
+	linenoiseHistoryLoad(history_file_name);
+}
+
 void begin_console()
 {
+	load_console_history();
+
 	console_probe();
 
 	xTaskCreate(
@@ -128,7 +133,3 @@ void begin_console()
 	      nullptr); /* Task handle to keep track of created task */
 }
 
-void load_console_history()
-{
-	linenoiseHistoryLoad(history_file_name);
-}

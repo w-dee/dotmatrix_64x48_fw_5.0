@@ -40,7 +40,7 @@ void setup() {
 
   init_settings();
   init_fs();
-  init_console(); load_console_history();
+  init_console();
   wifi_setup();
 
   // find font partition and mmap into the address space
