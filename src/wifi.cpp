@@ -196,7 +196,7 @@ static void wifi_init_settings()
 	settings_read(F("ip_gateway"), ip_addr_settings.ip_gateway);
 	settings_read(F("ip_mask"),    ip_addr_settings.ip_mask);
 	settings_read(F("dns_1"),      ip_addr_settings.dns1);
-	settings_read(F("dns_2"),      ip_addr_settings.dns1);
+	settings_read(F("dns_2"),      ip_addr_settings.dns2);
 }
 
 /**
@@ -210,7 +210,7 @@ void wifi_write_settings()
 	settings_write(F("ip_gateway"), ip_addr_settings.ip_gateway);
 	settings_write(F("ip_mask"),    ip_addr_settings.ip_mask);
 	settings_write(F("dns_1"),      ip_addr_settings.dns1);
-	settings_write(F("dns_2"),      ip_addr_settings.dns1);
+	settings_write(F("dns_2"),      ip_addr_settings.dns2);
 }
 
 const String & wifi_get_ap_name()

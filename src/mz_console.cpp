@@ -73,7 +73,7 @@ void init_console()
 	/* Initialize the console */
 	esp_console_config_t console_config;
 
-	console_config.max_cmdline_args = 8;
+	console_config.max_cmdline_args = 16;
 	console_config.max_cmdline_length = 256;
 	#if CONFIG_LOG_COLORS
 	console_config.hint_color = atoi(LOG_COLOR_CYAN);
