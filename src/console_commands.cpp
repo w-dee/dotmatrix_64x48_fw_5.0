@@ -56,7 +56,7 @@ private:
         return func(argc, argv);
     }
 
-    bool is_you(const char *p) const
+    bool are_you(const char *p) const
     {
         return !strcmp(name, p);
     }
@@ -91,7 +91,7 @@ static int generic_handler(int argc, char **argv)
 {
     for(auto && cmd : commands)
     {
-        if(cmd->is_you(argv[0])) { return cmd->handler(argc, argv); }
+        if(cmd->are_you(argv[0])) { return cmd->handler(argc, argv); }
     }
     return -1; // command not found
 }
