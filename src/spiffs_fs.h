@@ -28,7 +28,7 @@ class ANY_SPIFFSFS : public FS
 public:
     ANY_SPIFFSFS();
     bool begin(bool formatOnFail=false, const char *label = nullptr, const char * basePath="/spiffs", uint8_t maxOpenFiles=10);
-    bool format();
+    bool format(const char * label = nullptr);
 };
 
 }

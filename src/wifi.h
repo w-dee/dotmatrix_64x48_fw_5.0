@@ -34,6 +34,10 @@ void wifi_set_ap_info(const String &_ap_name, const String &_ap_pass,
 void wifi_manual_ip_info(const ip_addr_settings_t & ip);
 
 String wifi_get_connection_info_string();
+bool validate_ipv4_address(const String &string_addr);
+bool validate_ipv4_netmask(const String  &string_addr);
 
+
+extern const String null_ip_addr; // contains "0.0.0.0"
 #endif
 

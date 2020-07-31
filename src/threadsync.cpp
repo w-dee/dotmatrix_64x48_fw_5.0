@@ -11,9 +11,10 @@ struct handler_queue_item_t
 {
     sync_handler_t handler;
     SemaphoreHandle_t runsem;
+    int retval;
 
     handler_queue_item_t(sync_handler_t _handler) :
-        handler(_handler), runsem(xSemaphoreCreateMutex())
+        handler(_handler), runsem(xSemaphoreCreateMutex()), retval(-1)
     {
         xSemaphoreTake(runsem, portMAX_DELAY);
     }
@@ -28,7 +29,7 @@ struct handler_queue_item_t
 /**
  * run specified handler in main thread
  * */
-void run_in_main_thread(sync_handler_t handler)
+int run_in_main_thread(sync_handler_t handler)
 {
     // create queue item on heap
     handler_queue_item_t * item = new handler_queue_item_t(handler);
@@ -43,8 +44,12 @@ void run_in_main_thread(sync_handler_t handler)
     xSemaphoreTake(item->runsem, portMAX_DELAY);
     xSemaphoreGive(item->runsem);
 
+    int retval = item->retval;
+
     // delete handler item
     delete item;
+
+    return retval;
 }
 
 /**
@@ -64,7 +69,7 @@ void poll_main_thread_queue()
     if(!item) return;
 
     // run the handler
-    item->handler();
+    item->retval = item->handler();
 
     // release semaphore to tell waiting thread that the handler has done
     xSemaphoreGive(item->runsem);

@@ -309,3 +309,45 @@ String wifi_get_connection_info_string()
 	return m;
 }
 
+bool validate_ipv4_address(const String &string_addr)
+{
+	IPAddress addr;
+	if(!addr.fromString(string_addr)) return false; // IPAddress::fromString validates the string
+	return true;	
+}
+
+bool validate_ipv4_netmask(const String  &string_addr)
+{
+	IPAddress addr;
+	if(!addr.fromString(string_addr)) return false; // IPAddress::fromString validates the string
+
+	// is valid netmask ??
+	// lower index is higher octet;
+	uint32_t v = (addr[0] << 24) + (addr[1] << 16) + (addr[2] << 8) + (addr[3] << 0);
+
+	bool valid = true;
+	bool one = true;
+	for(int i = 31; i>=0; --i)
+	{
+		if(!(v & (1<<i)))
+		{
+			// zero found
+			if(one)
+			{
+				one = false;
+				v = ~v; // invert all bits
+			}
+		}
+		/* fall through */
+		if(!(v & (1<<i)))
+		{
+			valid = false;
+			break; // non-consistent netmask
+		}
+	}
+
+	return valid;
+}
+
+
+const String null_ip_addr = "0.0.0.0";

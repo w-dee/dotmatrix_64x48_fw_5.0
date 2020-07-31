@@ -19,6 +19,11 @@ void init_settings()
     SETTINGS_SPIFFS.begin(true, SETTINGS_PART_LABEL.c_str(), SETTINGS_MOUNT_POINT.c_str(), 2);
 }
 
+void clear_settings()
+{
+	SETTINGS_SPIFFS.format(SETTINGS_PART_LABEL.c_str());
+}
+
 static constexpr size_t MAX_KEY_LEN = 30;
 static constexpr int CHECKSUM_SIZE = sizeof(uint32_t); // in bytes
 

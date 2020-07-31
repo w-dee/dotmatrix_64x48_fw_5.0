@@ -99,10 +99,10 @@ bool ANY_SPIFFSFS::begin(bool formatOnFail, const char *label, const char * base
     return true;
 }
 
-bool ANY_SPIFFSFS::format()
+bool ANY_SPIFFSFS::format(const char *label)
 {
     disableCore0WDT();
-    esp_err_t err = esp_spiffs_format(NULL);
+    esp_err_t err = esp_spiffs_format(label);
     enableCore0WDT();
     if(err){
         log_e("Formatting SPIFFS failed! Error: %d", err);

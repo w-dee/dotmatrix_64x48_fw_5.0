@@ -12,10 +12,35 @@ void setup() {
   // put your setup code here, to run once:
   delay(3000);
 
-  init_console();
+  matrix_drive_setup();
+
+  // before init_settings, check cancel buttion be pressed over 1sec
+  delay(100); // wait for matrix row drive cycles several times
+  printf("--buttons: %x\n", button_scan_bits);
+  if(button_scan_bits & BUTTON_CANCEL)
+  {
+    printf("Cancel button pressed. Seeing if this button is pressed over 1 sec .");
+    bool clear_it = true;
+    for(int i = 0; i < 10; ++i)
+    {
+      if(!(button_scan_bits & BUTTON_CANCEL)) { clear_it = false; break; }
+      delay(100);
+      printf(".");
+      fflush(stdout);
+    }
+    if(clear_it)
+    {
+        printf(" OK, now clearing settings.");
+        fflush(stdout);
+        clear_settings();
+    }
+    puts("");
+  }
+
+
   init_settings();
   init_fs();
-  matrix_drive_setup();
+  init_console();
   wifi_setup();
 
   // find font partition and mmap into the address space
