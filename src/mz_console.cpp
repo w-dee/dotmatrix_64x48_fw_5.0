@@ -10,7 +10,7 @@
 #include "esp_vfs_fat.h"
 #include "threadsync.h"
 
-
+static const char * const history_file_name = "/settings/.history";
 
 static void console_task(void *)
 {
@@ -20,6 +20,8 @@ static void console_task(void *)
 
 		if((line = linenoise("> ")) != NULL) {
 			linenoiseHistoryAdd(line);
+
+			linenoiseHistorySave(history_file_name);
 
 			//printf("got: %s\r\n", LastLine.c_str());
 			int ret_val = 0;
@@ -105,3 +107,7 @@ void begin_console()
 	      nullptr); /* Task handle to keep track of created task */
 }
 
+void load_console_history()
+{
+	linenoiseHistoryLoad(history_file_name);
+}
