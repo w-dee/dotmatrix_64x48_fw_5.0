@@ -20,6 +20,7 @@ struct ip_addr_settings_t
 
 	ip_addr_settings_t();
 	void clear();
+	void dump(const char * address_zero_comment = nullptr) const;
 };
 
 const String & wifi_get_ap_name();

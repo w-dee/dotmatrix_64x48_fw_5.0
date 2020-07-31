@@ -6,6 +6,37 @@
 #include "wifi.h"
 #include "esp_wps.h"
 
+
+ip_addr_settings_t::ip_addr_settings_t()
+{
+	clear();
+}
+
+void ip_addr_settings_t::clear()
+{
+	ip_addr =
+	ip_gateway =
+	ip_mask =
+	dns1 =
+	dns2 = F("0.0.0.0");
+}
+
+void ip_addr_settings_t::dump(const char * address_zero_comment) const
+{
+	printf("IPv4 address     : %s", ip_addr.c_str());
+	if(ip_addr == null_ip_addr && address_zero_comment)
+	{
+		printf(" %s", address_zero_comment);
+	}
+	printf("\n");
+	printf("IPv4 gateway     : %s\n", ip_gateway.c_str());
+	printf("IPv4 subnet mask : %s\n", ip_mask.c_str());
+	printf("IPv4 DNS serv 1  : %s\n", dns1.c_str());
+	printf("IPv4 DNS serv 2  : %s\n", dns2.c_str());
+
+}
+
+
 /*
 	currently only PBC mode (no PIN) is implemented
 	taken from https://github.com/espressif/arduino-esp32/blob/master/libraries/WiFi/examples/WPS/WPS.ino
@@ -128,20 +159,6 @@ void wifi_check()
 		printf("%s", m.c_str());
 		puts("");
 	}
-}
-
-ip_addr_settings_t::ip_addr_settings_t()
-{
-	clear();
-}
-
-void ip_addr_settings_t::clear()
-{
-	ip_addr_settings.ip_addr =
-	ip_addr_settings.ip_gateway =
-	ip_addr_settings.ip_mask =
-	ip_addr_settings.dns1 =
-	ip_addr_settings.dns2 = F("0.0.0.0");
 }
 
 

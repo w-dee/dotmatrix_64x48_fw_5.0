@@ -105,23 +105,6 @@ namespace cmd_wifi_show
     struct arg_end *end = arg_end(5);
     void * argtable[] = { help, i_am_safe, end };
 
-    static void dump(const ip_addr_settings_t & settings, bool is_current)
-    {
-        printf("IPv4 address     : %s", settings.ip_addr.c_str());
-        if(settings.ip_addr == null_ip_addr)
-        {
-            if(is_current)
-                printf(" (not yet DHCP'ed)");
-            else
-                printf(" (use DHCP)");
-        }
-        printf("\n");
-        printf("IPv4 gateway     : %s\n", settings.ip_gateway.c_str());
-        printf("IPv4 subnet mask : %s\n", settings.ip_mask.c_str());
-        printf("IPv4 DNS serv 1  : %s\n", settings.dns1.c_str());
-        printf("IPv4 DNS serv 2  : %s\n", settings.dns2.c_str());
-    }
-
     class _cmd : public cmd_base_t
     {
 
@@ -135,10 +118,10 @@ namespace cmd_wifi_show
                 printf("%s\n", wifi_get_connection_info_string().c_str());
                 ip_addr_settings_t settings = wifi_get_ip_addr_settings(true);
                 printf("--- current IP status ---\n");
-                dump(settings, true);
+                settings.dump("(not configured)");
                 printf("--- configured IP settings ---\n");
                 settings = wifi_get_ip_addr_settings(false);
-                dump(settings, false);
+                settings.dump("(use DHCP)");
                 printf("--- AP settings ---\n");
                 printf("SSID             : %s\n", wifi_get_ap_name().c_str());
                 printf("PSK              : %s\n", 
@@ -244,6 +227,37 @@ namespace cmd_wifi_ip
     };
 }
 
+namespace cmd_wifi_ap
+{
+    struct arg_lit *help;
+    struct arg_str *ssid, *psk;
+    struct arg_end *end = arg_end(5);
+    void * argtable[] = {
+            help =    arg_litn(NULL, "help", 0, 1, "Display help and exit"),
+            ssid =    arg_strn("s",  "ssid",   "<SSID>", 1, 1, "SSID name"),
+            psk =     arg_strn("p",  "psk",    "<password>", 1, 1, "PSK (password)"),
+            end =     arg_end(5)
+            };
+
+    class _cmd : public cmd_base_t
+    {
+
+    public:
+        _cmd() : cmd_base_t("wifi-ap", "set AP's SSID and psk(password)", argtable) {}
+
+    private:
+
+        int func(int argc, char **argv)
+        {
+            return run_in_main_thread([] () -> int {
+                wifi_set_ap_info(ssid->sval[0], psk->sval[0]);
+                return 0;
+            }) ;       
+         }
+    };
+}
+
+
 namespace cmd_t
 {
     struct arg_lit *help = arg_litn(NULL, "help", 0, 1, "Display help and exit");
@@ -272,5 +286,6 @@ void init_console_commands()
 {
     static cmd_wifi_show::_cmd wifi_show_cmd;
     static cmd_wifi_ip::_cmd wifi_ip_cmd;
+    static cmd_wifi_ap::_cmd wifi_ap_cmd;
     static cmd_t::_cmd t_cmd;
 }

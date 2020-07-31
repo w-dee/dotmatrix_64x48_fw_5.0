@@ -110,7 +110,7 @@ void init_console()
 
 	ESP_ERROR_CHECK( esp_console_init(&console_config) );
 
-	linenoiseHistorySetMaxLen(10);
+	linenoiseHistorySetMaxLen(30);
 
 	initialize_commands();
 }
