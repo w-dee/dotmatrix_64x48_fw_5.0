@@ -13,6 +13,9 @@
 static const char * const history_file_name = "/settings/.history";
 static bool dumb_mode = true;
 
+#define DUMB_PROMPT  "> "
+#define ANSI_PROMPT  "\x1b[32m" "> " "\x1b[39m"
+
 void console_probe()
 {
 	if (linenoiseProbe()) { /* zero indicates success */
@@ -44,7 +47,7 @@ static void console_task(void *)
 			"info: Command line editing and history features are currently disabled.\n"
 			"info: Try 't<enter>' to enable command line editing and history.\n");
 
-		if((line = linenoise("> ")) != NULL) {
+		if((line = linenoise(dumb_mode ? DUMB_PROMPT : ANSI_PROMPT)) != NULL) {
 			linenoiseHistoryAdd(line);
 
 			linenoiseHistorySave(history_file_name);
@@ -101,9 +104,8 @@ void init_console()
 
 	console_config.max_cmdline_args = 16;
 	console_config.max_cmdline_length = 256;
-	#if CONFIG_LOG_COLORS
-	console_config.hint_color = atoi(LOG_COLOR_CYAN);
-	#endif
+	console_config.hint_color = 36; // cyan ??? doesn't work well at this IDF version
+	console_config.hint_bold = 1;
 
 	ESP_ERROR_CHECK( esp_console_init(&console_config) );
 
@@ -127,7 +129,7 @@ void begin_console()
 	xTaskCreate(
 	      console_task,           /* Task function. */
 	      "console Task",        /* name of task. */
-	      10000,                    /* Stack size of task */
+	      8192,                    /* Stack size of task */
 	      (void *)0,                     /* parameter of the task */
 	      1,                        /* priority of the task */
 	      nullptr); /* Task handle to keep track of created task */

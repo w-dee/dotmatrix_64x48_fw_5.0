@@ -174,7 +174,7 @@ namespace cmd_wifi_ip
     {
 
     public:
-        _cmd() : cmd_base_t("wifi-ip", "set DCHP mode or IP addresses manually", argtable) {}
+        _cmd() : cmd_base_t("wifi-ip", "Set DCHP mode or IP addresses manually", argtable) {}
 
     private:
         static void set_dns(ip_addr_settings_t &settings)
@@ -231,7 +231,10 @@ namespace cmd_wifi_ip
                     settings.ip_addr = null_ip_addr;
                     settings.ip_gateway = null_ip_addr;
                     settings.ip_mask = null_ip_addr;
-                    set_dns(settings);
+                    if(dns->count > 0)
+                        set_dns(settings); // use specified DNS
+                    else
+                        settings.dns1 = settings.dns2 = null_ip_addr; // otherwise use DHCP'ed DNS
                     wifi_manual_ip_info(settings);
                 }
                 else
@@ -266,7 +269,7 @@ namespace cmd_wifi_ap
     {
 
     public:
-        _cmd() : cmd_base_t("wifi-ap", "set AP's SSID and psk(password)", argtable) {}
+        _cmd() : cmd_base_t("wifi-ap", "Set AP's SSID and psk(password)", argtable) {}
 
     private:
 

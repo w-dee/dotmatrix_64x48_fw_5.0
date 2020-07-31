@@ -297,7 +297,7 @@ String wifi_get_connection_info_string()
 		if((uint32_t)WiFi.localIP() == 0)
 			m += String(F(", but no IP address got."));
 		else
-			m += String(F(", IP address is ")) + WiFi.localIP().toString() + F(" .");
+			m += String(F(", IP address is \"")) + WiFi.localIP().toString() + F("\".");
 		break;
 
 	case WL_NO_SSID_AVAIL:
