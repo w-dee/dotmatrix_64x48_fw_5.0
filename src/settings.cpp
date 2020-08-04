@@ -7,7 +7,6 @@
 #include "spiffs_fs.h"
 #include <rom/crc.h>
 
-
 static const String SETTINGS_PART_LABEL(F("conf")); // partition label
 static const String SETTINGS_MOUNT_POINT(F("/settings")); // mount point
 

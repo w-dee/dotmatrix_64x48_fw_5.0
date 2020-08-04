@@ -6,6 +6,7 @@
 #include "esp_system.h"
 #include "argtable3/argtable3.h"
 #include "threadsync.h"
+#include "settings.h"
 
 
 
@@ -177,6 +178,51 @@ namespace cmd_wifi_ap
 }
 
 
+namespace cmd_reboot
+{
+    struct arg_lit *help;
+    struct arg_lit *hard;
+    struct arg_end *end;
+    void * argtable[] = {
+            help =    arg_litn(nullptr, "help", 0, 1, "Display help and exit"),
+            hard =    arg_litn(nullptr, "clear-all-settings", 0, 1, "Clear all settings to their default values"),
+            end =     arg_end(5)
+            };
+
+    class _cmd : public cmd_base_t
+    {
+
+    public:
+        _cmd() : cmd_base_t("reboot", "Reboot and optionally clear all settings", argtable) {}
+
+    private:
+
+        int func(int argc, char **argv)
+        {
+            return run_in_main_thread([] () -> int {
+                if(hard->count)
+                {
+                    // put all settings clear inidication file
+                    FILE * f = fopen(CLEAR_SETTINGS_INDICATOR_FILE, "w");
+                    if(f) fclose(f);
+                }
+                // ummm...
+                // As far as I know, spiffs is always-consistent,
+                // so at any point, rebooting the hardware may not corrupt
+                // the filesystem. Obviously FAT is not. Take care if
+                // using micro SD cards.
+                printf("Rebooting ...\n");
+                delay(1000);
+                ESP.restart();
+                for(;;) /**/ ;
+                return 0; // must be non-reachable
+            }) ;       
+         }
+    };
+}
+
+
+
 namespace cmd_t
 {
     struct arg_lit *help = arg_litn(NULL, "help", 0, 1, "Display help and exit");
@@ -210,5 +256,6 @@ void init_console_commands()
     static cmd_wifi_show::_cmd wifi_show_cmd;
     static cmd_wifi_ip::_cmd wifi_ip_cmd;
     static cmd_wifi_ap::_cmd wifi_ap_cmd;
+    static cmd_reboot::_cmd reboot_cmd;
     static cmd_t::_cmd t_cmd;
 }

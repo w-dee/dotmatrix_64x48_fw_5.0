@@ -13,6 +13,7 @@ void setup() {
   delay(3000);
 
   matrix_drive_setup();
+  init_fs();
 
   // before init_settings, check cancel buttion be pressed over 1sec
   delay(100); // wait for matrix row drive cycles several times
@@ -37,9 +38,18 @@ void setup() {
     puts("");
   }
 
+  // or, if /spiffs/.clear exist, clear all settings
+  if(FILE *f = fopen(CLEAR_SETTINGS_INDICATOR_FILE, "r"))
+  {
+    fclose(f);
+    unlink(CLEAR_SETTINGS_INDICATOR_FILE);
+    printf("Clearing settings requested.\n");
+    fflush(stdout);
+    clear_settings();
+  }
+
 
   init_settings();
-  init_fs();
   init_console();
   wifi_setup();
 
