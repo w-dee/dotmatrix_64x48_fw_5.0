@@ -36,7 +36,9 @@ void console_probe()
 }
 
 
-
+/**
+ * Console task handler
+ * */
 static void console_task(void *)
 {
 	// Note, this function is to be run inside separete thread
