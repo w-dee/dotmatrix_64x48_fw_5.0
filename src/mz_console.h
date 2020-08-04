@@ -1,6 +1,55 @@
 #pragma once
 
 
+
+/**
+ * base class for command handler
+ * */
+class cmd_base_t
+{
+    const char * name;
+    const char * hint;
+    void ** at;
+
+    virtual int func(int argc, char **argv) = 0;
+
+public:
+    /**
+     * Show usage
+     * */
+    void usage() const;
+
+public:
+    /**
+     * Common command handler
+     * */
+    int handler(int argc, char **argv);
+
+public:
+    /**
+     * The constructor.
+     * _argtable is an argtable array. The first item must be the help.
+     * */
+    cmd_base_t(const char *_name, const char *_hint, void ** const _argtable);
+
+
+    /**
+     * returns the command name matches the argument
+     * */
+    bool are_you(const char* _name) const;
+
+    /**
+     * returns hint
+     * */
+    const char * get_hint() const { return hint;}
+
+    /**
+     * returns name
+     * */
+    const char * get_name() const { return name; }
+
+};
+
 /**
  * Check whether the connected terminal is capable of line editing.
  * This needs the terminal is actually connected and can bi-directionally

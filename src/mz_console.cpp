@@ -1,5 +1,6 @@
 #define Binary_h // a kind of nasty thing: disable warning about redefinition of BXXXX
 #include <Arduino.h>
+#include <mz_console.h>
 #include "esp_console.h"
 #include "esp_system.h"
 #include "esp_log.h"
@@ -13,8 +14,151 @@
 static const char * const history_file_name = "/settings/.history";
 static bool dumb_mode = true;
 
-#define DUMB_PROMPT  "> "
-#define ANSI_PROMPT  "\x1b[32m" "> " "\x1b[39m"
+#define DUMB_PROMPT  "MZ5> "
+#define ANSI_PROMPT  "\x1b[32m" "MZ5> " "\x1b[39m"
+
+#define MAX_CMDLINE_ARGS 16
+//#define MAX_CMDLINE_LENGTH 256
+
+static std::vector<cmd_base_t *> commands; // a list of commands
+
+
+
+
+void cmd_base_t::usage() const
+{
+	printf("Usage: %s", name);
+	arg_print_syntax(stdout, at, "\n");
+	printf("%s.\n\n", hint);
+	arg_print_glossary(stdout, at, "  %-25s %s\n");
+}
+
+int cmd_base_t::handler(int argc, char **argv)
+{
+	int nerrors;
+	nerrors = arg_parse(argc,argv,at);
+	if(((struct arg_lit*)at[0])->count > 0) // at[0] must be help
+	{
+		usage();
+		return 0;
+	}
+
+	if (nerrors > 0)
+	{
+		// search for arg_end
+		int tabindex;
+		struct arg_hdr ** table = (struct arg_hdr**)at;
+		for (tabindex = 0; !(table[tabindex]->flag & ARG_TERMINATOR); tabindex++) /**/;
+
+		/* Display the error details contained in the arg_end struct.*/
+		arg_print_errors(stdout, (struct arg_end*)(table[tabindex]), name);
+		printf("Try '%s --help' for more information.\n", name);
+		return 0;
+	}
+
+	return func(argc, argv);
+}
+
+cmd_base_t::cmd_base_t(const char *_name, const char *_hint, void ** const _argtable) :
+	name(_name), hint(_hint), at(_argtable)
+{
+	commands.push_back(this);
+}
+
+bool cmd_base_t::are_you(const char* _name) const
+{
+	return !strcmp(_name, this->name);
+}
+
+
+
+/**
+ * Run a command.
+ * */
+static int run_command(const char *line)
+{
+	// esp_console_split_argv accepts only [char *] not [const char *]
+	// so we need to dup it.
+	char * l = strdup(line);
+	char * argv [MAX_CMDLINE_ARGS];
+	size_t argc = esp_console_split_argv(l, argv, MAX_CMDLINE_ARGS);
+	int retval = -1;
+
+	if(!argc)
+	{
+		// empty
+		retval = 0;
+		goto quit;
+	}
+
+	// argv[0] must be a command name. search it.
+	for(auto && i : commands)
+	{
+		if(i->are_you(argv[0]))
+		{
+			// command found. execute it.
+			retval = i->handler(argc, argv);
+			goto quit;
+		}
+	}
+
+	// command not found
+	printf("Command not found. Type 'help' to show help.\n");
+
+	quit:
+	if(l) free(l);
+	return retval;
+}
+
+
+/**
+ * help handler
+ * */
+namespace cmd_help
+{
+    struct arg_lit *help = arg_litn(NULL, "help", 0, 1, "Display help and exit");
+    struct arg_end *end = arg_end(5);
+	struct arg_str *cmd;
+    void * argtable[] = { help,
+		cmd = arg_strn(nullptr, nullptr, "<command>", 0, 1, "Command name to show help"),
+		end };
+
+    class _cmd : public cmd_base_t
+    {
+
+    public:
+        _cmd() : cmd_base_t("help", "Show command help", argtable) {}
+
+    private:
+        int func(int argc, char **argv)
+        {
+			if(cmd->count > 0)
+			{
+				// search command and show help of it
+				for(auto && i : commands)
+				{
+					if(i->are_you(cmd->sval[0]))
+					{
+						i->usage();
+						return 0;
+					}
+				}
+				printf("Command '%s' not found.\n\n", cmd->sval[0]);
+			}
+
+			// list each command line help
+			printf("Available commands:\n");
+			for(auto && i : commands)
+			{
+				printf("%-10s %s\n", i->get_name(), i->get_hint());
+			}
+			return 0;
+        }
+    };
+}
+
+
+
 
 void console_probe()
 {
@@ -54,13 +198,7 @@ static void console_task(void *)
 
 			linenoiseHistorySave(history_file_name);
 
-			//printf("got: %s\r\n", LastLine.c_str());
-			int ret_val = 0;
-			esp_err_t err = esp_console_run(line, &ret_val);
-			if(err == ESP_ERR_NOT_FOUND)
-			{
-				printf("Command not found. Type 'help' to show help.\n");
-			}
+			run_command(line);
 
 			linenoiseFree(line); 
 		}
@@ -101,18 +239,9 @@ void init_console()
 	/* Tell VFS to use UART driver */
 	esp_vfs_dev_uart_use_driver(CONFIG_CONSOLE_UART_NUM);
 
-	/* Initialize the console */
-	esp_console_config_t console_config;
-
-	console_config.max_cmdline_args = 16;
-	console_config.max_cmdline_length = 256;
-	console_config.hint_color = 36; // cyan ??? doesn't work well at this IDF version
-	console_config.hint_bold = 1;
-
-	ESP_ERROR_CHECK( esp_console_init(&console_config) );
-
 	linenoiseHistorySetMaxLen(30);
 
+	static cmd_help::_cmd help_cmd;
 	initialize_commands();
 }
 
