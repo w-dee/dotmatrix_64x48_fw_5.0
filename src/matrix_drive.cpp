@@ -24,9 +24,34 @@
 #define IO_COLSER 18
 #define IO_COLLATCH 5
 #define IO_ROWLATCH 32
-#define IO_HC585SEROUT 34
+#define IO_HC595SEROUT 34
 #define IO_LED1642_RST 13
 #define IO_BUTTONSENSE 35
+
+
+/**
+ * GPIO initialize
+ * */
+static void led_gpio_init()
+{
+	pinMode(IO_PWCLK, OUTPUT);
+	pinMode(IO_COLCLK, OUTPUT);
+	pinMode(IO_COLSER, OUTPUT);
+	pinMode(IO_COLLATCH, OUTPUT);
+	pinMode(IO_ROWLATCH, OUTPUT);
+	pinMode(IO_HC595SEROUT, INPUT);
+	pinMode(IO_LED1642_RST, OUTPUT);
+	pinMode(IO_BUTTONSENSE, INPUT);
+
+	// note: software reset (SW_CPU_RESET) seems
+	// that it *does not* reset the pin matrix assignment.
+	// so we will need to reset them at here.
+	pinMatrixOutDetach(IO_COLCLK, false, false);
+	pinMatrixOutDetach(IO_COLSER, false, false); // bit 0
+	pinMatrixOutDetach(IO_COLLATCH, false, false); // bit 1
+	pinMatrixOutDetach(IO_ROWLATCH, false, false); // bit 2
+
+}
 
 /**
  * Make any GPIO driving LED1642 low
@@ -38,6 +63,7 @@ static void led_gpio_set_low()
 	digitalWrite(IO_COLSER, LOW);
 	digitalWrite(IO_COLLATCH, LOW);
 	digitalWrite(IO_ROWLATCH, LOW);
+	digitalWrite(IO_LED1642_RST, LOW);
 }
 
 
@@ -49,14 +75,18 @@ static void led_hard_reset_led1642()
 	led_gpio_set_low();
 
 	// make LED1642's VDD shorted to the GND
+	delay(10);
+
 	digitalWrite(IO_LED1642_RST, 1);
 
 	// wait for a while
-	delay(10);
+	delay(100);
 
 	// release VDD
 	digitalWrite(IO_LED1642_RST, 0);
 
+	// wait for a while
+	delay(10);
 }
 
 
@@ -108,7 +138,7 @@ static void led_post()
 		// return path driving the input pin is very weak and noisy path.
 		// in practive it seems that there is no need to insert wait here ...
 		delayMicroseconds(10);
-		int r = digitalRead(IO_HC585SEROUT);
+		int r = digitalRead(IO_HC595SEROUT);
 		led_print_0_1(r);
 		if(r != (lfsr & 1))
 		{
@@ -149,7 +179,7 @@ static void led_post_set_led1642_reg(int reg, uint16_t val)
 			digitalWrite(IO_COLSER, !!(val & (1<<bit)));
 /*
 		printf("%2d:%2d:%d:%d:%d:%d:%d:%d:%d:%d\r\n",
-			i, bit, !!(val & (1<<bit)), digitalRead(IO_HC585SEROUT),
+			i, bit, !!(val & (1<<bit)), digitalRead(IO_HC595SEROUT),
 			digitalRead(25),
 			digitalRead(26),
 			digitalRead(27),
@@ -627,15 +657,7 @@ void matrix_drive_setup() {
 		for(int x = 0; x < 64; ++x)
 			array[y][x] = 255;
 
-
-	pinMode(IO_PWCLK, OUTPUT);
-	pinMode(IO_COLCLK, OUTPUT);
-	pinMode(IO_COLSER, OUTPUT);
-	pinMode(IO_COLLATCH, OUTPUT);
-	pinMode(IO_ROWLATCH, OUTPUT);
-	pinMode(IO_HC585SEROUT, INPUT);
-	pinMode(IO_LED1642_RST, OUTPUT);
-	pinMode(IO_BUTTONSENSE, INPUT);
+	led_gpio_init();
 
 	led_gpio_set_low();
 
@@ -653,8 +675,9 @@ void matrix_drive_setup() {
 	// to make all LED1642s have proper configuration.
 	for(int i = 0; i <NUM_LED1642 * 4; ++i)
 	{
-		uint16_t led_config = (1<<13) | // enable SDO delay
-			(1<<11) | (1<<12) |(1<<15); // Output turn-on/off time: on:180ns, off:150ns
+		uint16_t led_config = 0;
+		led_config += (1<<13);  // enable SDO delay
+		led_config += (1<<11) | (1<<12) |(1<<15); // Output turn-on/off time: on:180ns, off:150ns
 		led_config += 0b111111 | (1<<6); // set current gain
 		led_post_set_led1642_reg(7, led_config); // set control register
 	}
