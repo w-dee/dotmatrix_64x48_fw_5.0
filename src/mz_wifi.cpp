@@ -3,7 +3,7 @@
 #include "matrix_drive.h"
 //#include SSID_H
 #include "settings.h"
-#include "wifi.h"
+#include "mz_wifi.h"
 #include "esp_wps.h"
 
 

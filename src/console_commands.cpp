@@ -1,7 +1,7 @@
 #include <functional>
 #include <vector>
 #include "mz_console.h"
-#include "wifi.h"
+#include "mz_wifi.h"
 #include "esp_console.h"
 #include "esp_system.h"
 #include "argtable3/argtable3.h"

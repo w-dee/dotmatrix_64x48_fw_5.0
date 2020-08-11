@@ -3,7 +3,7 @@
 #include "spiffs_fs.h"
 #include "settings.h"
 #include "update.h"
-#include "wifi.h"
+#include "mz_wifi.h"
 #include "buttons.h"
 #include "mz_console.h"
 #include "threadsync.h"
