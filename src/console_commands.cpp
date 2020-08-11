@@ -163,7 +163,7 @@ namespace cmd_wifi_ap
     {
 
     public:
-        _cmd() : cmd_base_t("wifi-ap", "Set AP's SSID and psk(password)", argtable) {}
+        _cmd() : cmd_base_t("wifi-ap", "Set AP's SSID and PSK(password)", argtable) {}
 
     private:
 
