@@ -177,6 +177,93 @@ namespace cmd_wifi_ap
     };
 }
 
+namespace cmd_wifi_scan
+{
+    struct arg_lit *help;
+    struct arg_lit *hidden, *active;
+    struct arg_int *num;
+    struct arg_end *end;
+    void * argtable[] = {
+            help =     arg_litn(NULL, "help", 0, 1, "Display help and exit"),
+            num =      arg_intn("m", nullptr,  "<1-255>", 0, 1, "Maximum network count to show (default 20)"),
+            hidden =   arg_litn("h", "hidden", 0, 1, "Show also hidden networks"),
+            active =   arg_litn("a", "active", 0, 1, "Use active scan instead of passive scan"),
+            end =      arg_end(5)
+            };
+
+    class _cmd : public cmd_base_t
+    {
+
+    public:
+        _cmd() : cmd_base_t("wifi-scan", "Scan WiFi networks", argtable) {}
+
+    private:
+
+        int func(int argc, char **argv)
+        {
+            size_t max = SIZE_MAX;
+            if(num->count > 0)
+            {
+                if(num->ival[0] < 1 || num->ival[0] > 255)
+                {
+                    printf("Invalid count of -m option: %d\n", num->ival[0]);
+                    return 1;
+                }
+                max = num->ival[0];
+            }
+            run_in_main_thread([] () -> int {
+                // initiate scan
+                WiFi.scanNetworks(true, hidden->count > 0, active->count > 0);
+                return 0;
+            }) ;
+            // scan is running ... wait it done
+            printf("Scanning ");
+            fflush(stdout);
+            while(run_in_main_thread([] () -> int {
+                return WiFi.scanComplete() == WIFI_SCAN_RUNNING;
+            }))
+            {
+                vTaskDelay(200);
+                putchar('.');
+                fflush(stdout);
+            }
+            puts("");
+            // show the result
+            return run_in_main_thread([&] () -> int {
+                
+                int16_t result = WiFi.scanComplete();
+                if(result == WIFI_SCAN_FAILED)
+                {
+                    printf("WiFi scan failed.\n");
+                    return 3;
+                }
+                if(result == 0)
+                {
+                    printf("No network found.\n");
+                    return 0;
+                }
+                if((uint8_t)result != result)
+                {
+                    printf("Too many stations.\n");  // !!?!!!?!?!?!?
+                    return 0;
+                }
+                printf("%-20s %-17s %4s %2s\n", "SSID", "BSSID", "RSSI", "Ch");
+                std::vector<wifi_scan_item_t> items = get_wifi_scan_list(max);
+                for(auto && i : items)
+                {
+                    printf("%-20s %17s %4d %2d\n",
+                        i.SSID.c_str(),
+                        i.BSSIDstr.c_str(),
+                        i.RSSI,
+                        i.channel
+                        );
+                }
+
+                return 0;
+            }) ;
+         }
+    };
+}
 
 namespace cmd_reboot
 {
@@ -256,6 +343,7 @@ void init_console_commands()
     static cmd_wifi_show::_cmd wifi_show_cmd;
     static cmd_wifi_ip::_cmd wifi_ip_cmd;
     static cmd_wifi_ap::_cmd wifi_ap_cmd;
+    static cmd_wifi_scan::_cmd wifi_scan_cmd;
     static cmd_reboot::_cmd reboot_cmd;
     static cmd_t::_cmd t_cmd;
 }

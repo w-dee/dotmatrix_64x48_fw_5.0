@@ -94,10 +94,7 @@ static void WiFiEvent(WiFiEvent_t event, system_event_info_t info){
 		delay(10);
 		// read WPS configuration regardless of WPS success or not
 		ap_name = WiFi.SSID();
-		ap_pass = WiFi.psk();
-
-		// WPS client should be have automatic DHCP
-		ip_addr_settings.clear();
+		ap_pass = WiFi.psk();void get_scan_list(std::vector<wifi_scan_item_t> list);
 
 		// write current configuration
 		wifi_write_settings();
@@ -364,6 +361,43 @@ bool validate_ipv4_netmask(const String  &string_addr)
 	}
 
 	return valid;
+}
+
+
+std::vector<wifi_scan_item_t> get_wifi_scan_list(size_t max)
+{
+	// here we use naiive method to sort the list.
+	// assumes list is not so big.
+	std::vector<wifi_scan_item_t> items;
+	int16_t result = WiFi.scanComplete();
+	if(result != WIFI_SCAN_FAILED && result > 0)
+	{
+		uint8_t num_stations = result;
+		items.reserve(std::min((size_t)num_stations, max));
+		for(int rssi = 0; rssi >= -100; --rssi)
+		{
+			for(uint8_t i = 0; i < num_stations; ++i)
+			{
+				if(WiFi.RSSI(i) == rssi)
+				{
+					// push an item
+					uint8_t * bssid;
+					bssid = WiFi.BSSID(i);
+					items.push_back (wifi_scan_item_t {
+						.SSID = WiFi.SSID(i),
+						.encryptionType = WiFi.encryptionType(i),
+						.RSSI = rssi,
+						.BSSID = {bssid[0],bssid[1],bssid[2],bssid[3],bssid[4],bssid[5]},
+						.BSSIDstr = WiFi.BSSIDstr(i),
+						.channel = WiFi.channel(i),
+					});
+					if(items.size() == max) goto quit;
+				}
+			}
+		}
+	}
+quit:
+	return items;
 }
 
 
