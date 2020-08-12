@@ -15,12 +15,33 @@
 // to ease access to the static arg_XXX * items.
 
 
+
+
 namespace cmd_wifi_show
 {
     struct arg_lit *help = arg_litn(NULL, "help", 0, 1, "Display help and exit");
     struct arg_lit *i_am_safe = arg_litn(nullptr, "i-am-safe", 0, 1, "Show non-masked PSK (password)");
     struct arg_end *end = arg_end(5);
     void * argtable[] = { help, i_am_safe, end };
+
+    static void show_ip_configuration()
+    {
+        ip_addr_settings_t settings = wifi_get_ip_addr_settings(true);
+        printf("--- current IP status ---\n");
+        settings.dump("(not configured)");
+        printf("--- configured IP settings ---\n");
+        settings = wifi_get_ip_addr_settings(false);
+        settings.dump("(use DHCP)");
+    }
+
+    static void show_ap_configuration(bool safe)
+    {
+        printf("--- AP settings ---\n");
+        printf("SSID             : %s\n", wifi_get_ap_name().c_str());
+        printf("PSK              : %s\n", 
+            (safe ? wifi_get_ap_pass().c_str() : "******** (try --i-am-safe to show)"));
+    }
+
 
     class _cmd : public cmd_base_t
     {
@@ -32,17 +53,9 @@ namespace cmd_wifi_show
         int func(int argc, char **argv)
         {
             return run_in_main_thread([] () -> int {
-                printf("%s\n", wifi_get_connection_info_string().c_str());
-                ip_addr_settings_t settings = wifi_get_ip_addr_settings(true);
-                printf("--- current IP status ---\n");
-                settings.dump("(not configured)");
-                printf("--- configured IP settings ---\n");
-                settings = wifi_get_ip_addr_settings(false);
-                settings.dump("(use DHCP)");
-                printf("--- AP settings ---\n");
-                printf("SSID             : %s\n", wifi_get_ap_name().c_str());
-                printf("PSK              : %s\n", 
-                    (i_am_safe->count > 0) ? wifi_get_ap_pass().c_str() : "******** (try --i-am-safe to show)");
+                printf("Status: %s\n", wifi_get_connection_info_string().c_str());
+                show_ip_configuration();
+                 show_ap_configuration(i_am_safe->count > 0);
                 return 0;
             }) ;       
         }
@@ -103,7 +116,8 @@ namespace cmd_wifi_ip
                 if(argc == 1)
                 {
                     // nothing specified
-                    usage();
+                    // show current configuration
+                    cmd_wifi_show::show_ip_configuration();
                     return 0;
                 }
                 const char *label_address = "address";
@@ -149,13 +163,14 @@ namespace cmd_wifi_ip
 
 namespace cmd_wifi_ap
 {
-    struct arg_lit *help;
+    struct arg_lit *help, *i_am_safe;
     struct arg_str *ssid, *psk;
     struct arg_end *end;
     void * argtable[] = {
             help =    arg_litn(NULL, "help", 0, 1, "Display help and exit"),
-            ssid =    arg_strn("s",  "ssid",   "<SSID>", 1, 1, "SSID name"),
-            psk =     arg_strn("p",  "psk",    "<password>", 1, 1, "PSK (password)"),
+            ssid =    arg_strn("s",  "ssid",   "<SSID>", 0, 1, "SSID name"),
+            psk =     arg_strn("p",  "psk",    "<password>", 0, 1, "PSK (password)"),
+            i_am_safe = arg_litn(nullptr, "i-am-safe", 0, 1, "Show non-masked PSK (password)"),
             end =     arg_end(5)
             };
 
@@ -169,6 +184,18 @@ namespace cmd_wifi_ap
 
         int func(int argc, char **argv)
         {
+            if(!ssid->count && !psk->count)
+            {
+                cmd_wifi_show::show_ap_configuration(i_am_safe->count > 0);
+                return 0;
+            }
+
+            if(!(ssid->count && psk->count))
+            {
+                printf("Both SSID and PSK must be given.\n");
+                return 1;
+            }
+
             return run_in_main_thread([] () -> int {
                 wifi_set_ap_info(ssid->sval[0], psk->sval[0]);
                 return 0;
