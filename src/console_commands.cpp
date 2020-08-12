@@ -27,7 +27,11 @@ namespace cmd_wifi_show
     static void show_ip_configuration()
     {
         ip_addr_settings_t settings = wifi_get_ip_addr_settings(true);
+        uint8_t mac[6];
+        esp_read_mac(mac, ESP_MAC_WIFI_STA);
         printf("--- current IP status ---\n");
+        printf("WiFi self MAC    : %02x:%02x:%02x:%02x:%02x:%02x\n",
+            mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
         settings.dump("(not configured)");
         printf("--- configured IP settings ---\n");
         settings = wifi_get_ip_addr_settings(false);
