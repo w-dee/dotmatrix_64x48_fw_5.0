@@ -70,25 +70,29 @@ static String wpspin2string(uint8_t a[]){
   return (String)wps_pin;
 }
 
+static WiFiEvent_t wps_last_state = SYSTEM_EVENT_WIFI_READY;
+
 static void WiFiEvent(WiFiEvent_t event, system_event_info_t info){
   switch(event){
     case SYSTEM_EVENT_STA_START:
-      puts("Station Mode Started");
+//      puts("Station mode started");
       break;
 
     case SYSTEM_EVENT_STA_GOT_IP:
-	  printf("Connected to : %s\r\n", String(WiFi.SSID()).c_str() );
-      printf("Got IPv4: %s\r\n", WiFi.localIP().toString().c_str() );
+//	  printf("Connected to : %s\r\n", String(WiFi.SSID()).c_str() );
+//      printf("Got IPv4: %s\r\n", WiFi.localIP().toString().c_str() );
 //      printf("Got IPv6: %s\r\n", WiFi.localIPv6().toString().c_str() );
       break;
 
     case SYSTEM_EVENT_STA_DISCONNECTED:
-      puts("Disconnected from station, attempting reconnection");
+//      puts("Disconnected from station, attempting reconnection");
       WiFi.reconnect();
       break;
 
     case SYSTEM_EVENT_STA_WPS_ER_SUCCESS:
-      printf("WPS Successfull, stopping WPS and connecting to: %s\r\n", String(WiFi.SSID()).c_str() );
+//      printf("WPS successfull, stopping WPS and connecting to: %s\r\n", String(WiFi.SSID()).c_str() );
+
+	  wps_last_state = event;
       esp_wifi_wps_disable();
 
 		delay(10);
@@ -102,11 +106,13 @@ static void WiFiEvent(WiFiEvent_t event, system_event_info_t info){
       WiFi.begin();
       break;
     case SYSTEM_EVENT_STA_WPS_ER_FAILED:
-      puts("WPS Failed.");
+//      puts("WPS failed.");
+	  wps_last_state = event;
       esp_wifi_wps_disable();
       break;
     case SYSTEM_EVENT_STA_WPS_ER_TIMEOUT:
-      puts("WPS Timedout.");
+//      puts("WPS timed out.");
+	  wps_last_state = event;
       esp_wifi_wps_disable();
       break;
     case SYSTEM_EVENT_STA_WPS_ER_PIN:
@@ -151,10 +157,12 @@ void wifi_check()
 	if(wifi_last_status != st)
 	{
 		wifi_last_status = st;
+/*
 		puts("");
 		String m = wifi_get_connection_info_string();
 		printf("%s", m.c_str());
 		puts("");
+*/
 	}
 }
 
@@ -166,9 +174,24 @@ void wifi_check()
 void wifi_wps()
 {
 	wpsInitConfig();
+	wps_last_state = SYSTEM_EVENT_WIFI_READY;
 	esp_wifi_wps_enable(&config);
 	esp_wifi_wps_start(0);
 }
+
+/**
+ * Returns last WPS status
+ * */
+WiFiEvent_t wifi_get_wps_status() { return wps_last_state; }
+
+/**
+ * Stops WPS configuration.
+ * */
+void wifi_stop_wps()
+{
+	esp_wifi_wps_disable();
+}
+
 
 /**
  * Start WiFi connection using configured parameters

@@ -6,6 +6,8 @@
 void wifi_setup();
 void wifi_check();
 void wifi_wps();
+WiFiEvent_t wifi_get_wps_status();
+void wifi_stop_wps();
 
 
 void wifi_start();

@@ -7,6 +7,7 @@
 #include "buttons.h"
 #include "mz_console.h"
 #include "threadsync.h"
+#include "calendar.h"
 
 void setup() {
   // put your setup code here, to run once:
@@ -52,6 +53,7 @@ void setup() {
   init_settings();
   init_console();
   wifi_setup();
+  init_calendar(); // sntp initialization needs to be located after network stack initialization
 
   // find font partition and mmap into the address space
 	puts("Compressed BFF font initializing ...");

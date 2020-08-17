@@ -296,6 +296,88 @@ namespace cmd_wifi_scan
     };
 }
 
+namespace cmd_wifi_wps
+{
+    struct arg_lit *help, *push;
+    struct arg_end *end;
+    void * argtable[] = {
+            help =    arg_litn(NULL, "help", 0, 1, "Display help and exit"),
+            push =    arg_litn("p",  "push", 0, 1, "Start WPS (Push Button Mode)"),
+            end =     arg_end(5)
+            };
+
+    class _cmd : public cmd_base_t
+    {
+
+    public:
+        _cmd() : cmd_base_t("wifi-wps", "Start WPS", argtable) {}
+
+    private:
+
+        int func(int argc, char **argv)
+        {
+            if(!push->count)
+            {
+                printf("To start WPS, try -p option.\n");
+                return 0;
+            }
+
+            // start WPS
+            printf("WPS initializing...\n");
+
+            run_in_main_thread([] () -> int {
+                wifi_wps();
+                return 0;
+            }) ;       
+
+            printf("WPS started. Type any key to stop WPS now.\n");
+
+            // check WPS status
+            int last_status;
+            while((last_status = run_in_main_thread([] () -> int {
+                return (int) wifi_get_wps_status();
+            })) == SYSTEM_EVENT_WIFI_READY)
+            {
+                // check STDIN has anything to consume
+                // say thanks to ESP32 IDF which successfully implemented
+                // proper select().
+                fd_set readfds;
+                FD_ZERO(&readfds);
+                struct timeval timeout;
+                timeout.tv_sec = 0;
+                timeout.tv_usec = 200000;
+                FD_SET(STDIN_FILENO, &readfds);
+                if (select(1, &readfds, NULL, NULL, &timeout))
+                {
+                    // yes, something is there
+                    (void) getchar(); // eat it and discard
+                    printf("Stopping WPS.\n");
+                    run_in_main_thread([] () -> int { wifi_stop_wps(); return 0; });
+                    goto quit;
+                }
+            }
+
+            switch(last_status)
+            {
+            case (int)SYSTEM_EVENT_STA_WPS_ER_SUCCESS:
+                printf("WPS succeeded.\n");
+                break;
+            case (int)SYSTEM_EVENT_STA_WPS_ER_FAILED:
+                printf("WPS failed.\n");
+                break;
+            case (int)SYSTEM_EVENT_STA_WPS_ER_TIMEOUT:
+                printf("WPS timed out.\n");
+                break;
+            default:
+                printf("WPS failed by unknown reason.\n");
+                break;
+            }
+        quit:
+            return 0;
+         }
+    };
+}
+
 namespace cmd_reboot
 {
     struct arg_lit *help;
@@ -375,6 +457,7 @@ void init_console_commands()
     static cmd_wifi_ip::_cmd wifi_ip_cmd;
     static cmd_wifi_ap::_cmd wifi_ap_cmd;
     static cmd_wifi_scan::_cmd wifi_scan_cmd;
+    static cmd_wifi_wps::_cmd wifi_wps_cmd;
     static cmd_reboot::_cmd reboot_cmd;
     static cmd_t::_cmd t_cmd;
 }
