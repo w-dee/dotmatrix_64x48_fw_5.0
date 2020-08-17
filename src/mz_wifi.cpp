@@ -98,10 +98,11 @@ static void WiFiEvent(WiFiEvent_t event, system_event_info_t info){
 		delay(10);
 		// read WPS configuration regardless of WPS success or not
 		ap_name = WiFi.SSID();
-		ap_pass = WiFi.psk();void get_scan_list(std::vector<wifi_scan_item_t> list);
-
-		// write current configuration
-		wifi_write_settings();
+		ap_pass = WiFi.psk();
+		{
+			ip_addr_settings_t settings;
+			wifi_manual_ip_info(settings); // use DHCP; this also writes current SSID/PSK settings
+		}
 
       WiFi.begin();
       break;
