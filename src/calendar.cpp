@@ -57,8 +57,8 @@ void set_tz(const string_vector & _time_servers, const String & _time_zone)
     time_servers = _time_servers;
     if(time_servers.size() > 3) time_servers.resize(3); // only three servers are supported
     time_zone = _time_zone;
-    reconfigure();
     write_settings();
+    reconfigure();
 }
 
 /**

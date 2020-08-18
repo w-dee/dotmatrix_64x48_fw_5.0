@@ -7,6 +7,7 @@
 #include "argtable3/argtable3.h"
 #include "threadsync.h"
 #include "settings.h"
+#include "calendar.h"
 
 
 
@@ -188,20 +189,20 @@ namespace cmd_wifi_ap
 
         int func(int argc, char **argv)
         {
-            if(!ssid->count && !psk->count)
-            {
-                cmd_wifi_show::show_ap_configuration(i_am_safe->count > 0);
-                return 0;
-            }
+           return run_in_main_thread([] () -> int {
+                if(!ssid->count && !psk->count)
+                {
+                    cmd_wifi_show::show_ap_configuration(i_am_safe->count > 0);
+                    return 0;
+                }
 
-            if(!(ssid->count && psk->count))
-            {
-                printf("Both SSID and PSK must be given.\n");
-                return 1;
-            }
+                if(!(ssid->count && psk->count))
+                {
+                    printf("Both SSID and PSK must be given.\n");
+                    return 1;
+                }
 
-            return run_in_main_thread([] () -> int {
-                wifi_set_ap_info(ssid->sval[0], psk->sval[0]);
+                    wifi_set_ap_info(ssid->sval[0], psk->sval[0]);
                 return 0;
             }) ;       
          }
@@ -378,6 +379,90 @@ namespace cmd_wifi_wps
     };
 }
 
+namespace cmd_ntp
+{
+    struct arg_lit *help = arg_litn(NULL, "help", 0, 1, "Display help and exit");
+    struct arg_str *servers = arg_strn("s", "servers", "<server>", 0, 3, "NTP servers");
+    struct arg_str *time_zone = arg_strn("z", "time-zone", "<tz-spec>", 0, 3, "Time zone (eg. JST-9)");
+    struct arg_end *end = arg_end(5);
+    void * argtable[] = { help, servers, time_zone, end };
+
+    static void show_ntp_configuration()
+    {
+        printf("--- NTP settings ---\n");
+        string_vector time_servers;
+        String time_zone_str;
+        get_tz(time_servers, time_zone_str);
+        // show three configurable time servers
+        for(size_t i = 0; i < 3; ++i)
+        {
+            printf("NTP server %d     : %s\n", (int)(i+1),
+                (time_servers.size() > i && !time_servers[i].isEmpty()) ? time_servers[i].c_str() :
+                    "(unspecified)");
+        }
+        printf("Time Zone        : %s\n", time_zone_str.c_str());
+    }
+
+    class _cmd : public cmd_base_t
+    {
+
+    public:
+        _cmd() : cmd_base_t("ntp", "Set NTP servers and time zone", argtable) {}
+
+    private:
+        int func(int argc, char **argv)
+        {
+            return run_in_main_thread([] () -> int {
+                if(!servers->count && !time_zone->count)
+                {
+                    // no option was given; show current configuration
+                    show_ntp_configuration();
+                    return 0;
+                }
+
+                string_vector time_servers;
+                String time_zone_str;
+                get_tz(time_servers, time_zone_str);
+
+                // check parameters
+                if(time_zone->count)
+                {
+                    if(strlen(time_zone->sval[0]) == 0)
+                    {
+                        printf("Empty time zone is invalid.\n");
+                        return 1;
+                    }
+                    time_zone_str = time_zone->sval[0];
+                }
+
+                if(servers->count)
+                {
+                    // new servers are specified;
+                    // clear all existing servers
+                    time_servers.clear();
+                    for(int i = 0; i < servers->count; ++i)
+                    {
+                        if(strlen(servers->sval[i]) > 0)
+                        {
+                            time_servers.push_back(servers->sval[i]);
+                        }
+                        else
+                        {
+                            printf("Empty time server is invalid.\n");
+                            return 1;
+                        }
+                    }
+                }
+
+                // set new servers
+                set_tz(time_servers, time_zone_str);
+                return 0;
+            });
+        }
+    };
+}
+
+
 namespace cmd_reboot
 {
     struct arg_lit *help;
@@ -458,6 +543,7 @@ void init_console_commands()
     static cmd_wifi_ap::_cmd wifi_ap_cmd;
     static cmd_wifi_scan::_cmd wifi_scan_cmd;
     static cmd_wifi_wps::_cmd wifi_wps_cmd;
+    static cmd_ntp::_cmd ntp_cmd;
     static cmd_reboot::_cmd reboot_cmd;
     static cmd_t::_cmd t_cmd;
 }
