@@ -382,7 +382,7 @@ namespace cmd_wifi_wps
 namespace cmd_ntp
 {
     struct arg_lit *help = arg_litn(NULL, "help", 0, 1, "Display help and exit");
-    struct arg_str *servers = arg_strn("s", "servers", "<server>", 0, 3, "NTP servers");
+    struct arg_str *servers = arg_strn("s", "server", "<server>", 0, 3, "NTP servers");
     struct arg_str *time_zone = arg_strn("z", "time-zone", "<tz-spec>", 0, 1, "Time zone (eg. JST-9)");
     struct arg_end *end = arg_end(5);
     void * argtable[] = { help, servers, time_zone, end };
