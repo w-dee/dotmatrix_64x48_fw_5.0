@@ -400,7 +400,11 @@ namespace cmd_ntp
                 (time_servers.size() > i && !time_servers[i].isEmpty()) ? time_servers[i].c_str() :
                     "(unspecified)");
         }
-        printf("Time Zone        : %s\n", time_zone_str.c_str());
+        printf("Time zone        : %s\n", time_zone_str.c_str());
+        char buf[30];
+        time_t tm;
+        tm = time(&tm);
+        printf("Local time got   : %s", ctime_r(&tm, buf)); // ctime puts \n at its last of output
     }
 
     class _cmd : public cmd_base_t
