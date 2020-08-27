@@ -3,6 +3,7 @@
 #include <Arduino.h>
 #include "settings.h"
 
+void calendar_reconfigure();
 void init_calendar();
 
 void set_tz(const string_vector & time_server, const String & time_zone);

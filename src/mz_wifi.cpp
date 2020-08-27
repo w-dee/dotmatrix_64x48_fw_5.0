@@ -5,6 +5,7 @@
 #include "settings.h"
 #include "mz_wifi.h"
 #include "esp_wps.h"
+#include "calendar.h"
 
 
 ip_addr_settings_t::ip_addr_settings_t()
@@ -71,6 +72,7 @@ static String wpspin2string(uint8_t a[]){
 }
 
 static WiFiEvent_t wps_last_state = SYSTEM_EVENT_WIFI_READY;
+static bool reconfigure_ntp = false;
 
 static void WiFiEvent(WiFiEvent_t event, system_event_info_t info){
   switch(event){
@@ -82,6 +84,7 @@ static void WiFiEvent(WiFiEvent_t event, system_event_info_t info){
 //	  printf("Connected to : %s\r\n", String(WiFi.SSID()).c_str() );
 //      printf("Got IPv4: %s\r\n", WiFi.localIP().toString().c_str() );
 //      printf("Got IPv6: %s\r\n", WiFi.localIPv6().toString().c_str() );
+	reconfigure_ntp = true; // to reconfigure NTP client to get current time as fast as possible
       break;
 
     case SYSTEM_EVENT_STA_DISCONNECTED:
@@ -164,6 +167,11 @@ void wifi_check()
 		printf("%s", m.c_str());
 		puts("");
 */
+	}
+	if(reconfigure_ntp)
+	{
+		reconfigure_ntp = false;
+		calendar_reconfigure();
 	}
 }
 

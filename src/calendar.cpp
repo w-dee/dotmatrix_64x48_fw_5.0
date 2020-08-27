@@ -11,7 +11,7 @@ static String time_zone;
 /**
  * reconfigure underlying time keeping facility
  * */
-static void reconfigure()
+void calendar_reconfigure()
 {
     if(time_servers.size() == 0 || time_servers[0].length() == 0 || time_zone.length() == 0)
         return; // error: not configurable
@@ -36,7 +36,7 @@ void init_calendar()
     if(time_servers.size() > 3) time_servers.resize(3); // only three servers are supported
 	settings_read(F("time_zone"), time_zone);
 
-    reconfigure();
+    calendar_reconfigure();
 }
 
 /**
@@ -58,7 +58,7 @@ void set_tz(const string_vector & _time_servers, const String & _time_zone)
     if(time_servers.size() > 3) time_servers.resize(3); // only three servers are supported
     time_zone = _time_zone;
     write_settings();
-    reconfigure();
+    calendar_reconfigure();
 }
 
 /**
