@@ -73,16 +73,14 @@ bool ANY_SPIFFSFS::begin(bool formatOnFail, const char *label, const char * base
       .base_path = basePath,
       .partition_label = label,
       .max_files = maxOpenFiles,
-      .format_if_mount_failed = false
+      .format_if_mount_failed = formatOnFail 
     };
 
+    // Manual reformatting as coded in the original SPIFFS library does not work
+    // on my chip. Instead, esp_vfs_spiffs_conf_t::format_is_mount_failed works.
+    // Why ?
+
     esp_err_t err = esp_vfs_spiffs_register(&conf);
-    if(err == ESP_FAIL && formatOnFail){
-        printf("Mounting SPIFFS failed. Retry after formatting ... Label:%s\r\n", p_label);
-        if(format()){
-            err = esp_vfs_spiffs_register(&conf);
-        }
-    }
     if(err != ESP_OK){
         printf("Mounting SPIFFS failed! Label:%s Error: %d\r\n", p_label, err);
         // TODO: PANIC
