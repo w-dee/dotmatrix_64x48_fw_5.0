@@ -8,6 +8,31 @@
 #include "threadsync.h"
 #include "settings.h"
 #include "calendar.h"
+#include "ir_rmt.h"
+
+
+// wait for maximum 20ms, checking key type, returning
+// whether any key has pressed
+static bool any_key_pressed()
+{
+    // check STDIN has anything to consume
+    // say thanks to ESP32 IDF which successfully implemented
+    // proper select().
+    fd_set readfds;
+    FD_ZERO(&readfds);
+    struct timeval timeout;
+    timeout.tv_sec = 0;
+    timeout.tv_usec = 20000;
+    FD_SET(STDIN_FILENO, &readfds);
+    if (select(1, &readfds, NULL, NULL, &timeout))
+    {
+        // yes, something is there
+        (void) getchar(); // eat it and discard
+        return true;
+    }
+    return false;
+}
+
 
 
 
@@ -339,19 +364,8 @@ namespace cmd_wifi_wps
                 return (int) wifi_get_wps_status();
             })) == SYSTEM_EVENT_WIFI_READY)
             {
-                // check STDIN has anything to consume
-                // say thanks to ESP32 IDF which successfully implemented
-                // proper select().
-                fd_set readfds;
-                FD_ZERO(&readfds);
-                struct timeval timeout;
-                timeout.tv_sec = 0;
-                timeout.tv_usec = 200000;
-                FD_SET(STDIN_FILENO, &readfds);
-                if (select(1, &readfds, NULL, NULL, &timeout))
+                if(any_key_pressed())
                 {
-                    // yes, something is there
-                    (void) getchar(); // eat it and discard
                     printf("Stopping WPS.\n");
                     run_in_main_thread([] () -> int { wifi_stop_wps(); return 0; });
                     goto quit;
@@ -466,6 +480,126 @@ namespace cmd_ntp
     };
 }
 
+namespace cmd_rmt
+{
+    struct arg_lit *help;
+    struct arg_lit *recv;
+    struct arg_int *num;
+    struct arg_end *end;
+    void * argtable[] = {
+            help =    arg_litn(NULL, "help", 0, 1, "Display help and exit"),
+            recv =    arg_litn("r", nullptr, 0, 1, "Do receive"),
+            num =     arg_int1(nullptr, nullptr, "<0-99>", "Data slot number"),
+            end =     arg_end(5)
+            };
+
+    class _cmd : public cmd_base_t
+    {
+
+    public:
+        _cmd() : cmd_base_t("rmt", "IR remote control", argtable) {}
+
+    private:
+
+        int func(int argc, char **argv)
+        {
+            char numstr[5];
+            if(num->ival[0] < 0 || num->ival[0] > 99)
+            {
+                printf("Data slot number must be within 0 - 99.\n");
+                return 1;
+            }
+            snprintf(numstr, sizeof(numstr), "%02d", num->ival[0]);
+
+            if(!recv->count)
+            {
+                // send mode
+                run_in_main_thread([&numstr] () -> int {
+                        rmt_start_send(numstr + String(".rmt"));
+                        return 0;
+                    });
+                while(true)
+                {
+                    if(any_key_pressed()) break;
+                    if(!run_in_main_thread([] () -> int { return rmt_in_progress(); })) break;
+                }
+                rmt_result_t result = (rmt_result_t)run_in_main_thread([] () -> int {
+                    return rmt_get_status();
+                });
+                switch(result)
+                {
+                case rmt_notfound:
+                    printf("Slot %s not found.\n", numstr);
+                    break;
+                case rmt_broken:
+                    printf("Broken slot number %s.\n", numstr);
+                    break;
+                default:
+                    break; // unknown state ...?
+                }
+                // clear rmt state
+                run_in_main_thread([] () -> int {
+                    rmt_clear();
+                    return 0;
+                });
+                return 0;
+            }
+            else
+            {
+                // receive mode
+                run_in_main_thread([] () -> int {
+                    rmt_start_receive();
+                    return 0;
+                });
+                printf("Waiting for an IR remote controller signal ...\n");
+                printf("Press any key to stop.\n");
+                while(true)
+                {
+                    if(any_key_pressed())
+                    {
+                        // stop receiving when any key is pressed
+                        run_in_main_thread([] () -> int {
+                            rmt_stop_receive();
+                            return 0;
+                        });
+                        break;
+                    }
+                    if(!run_in_main_thread([] () -> int { return rmt_in_progress(); })) break;
+                }
+
+                rmt_result_t result = (rmt_result_t)run_in_main_thread([] () -> int {
+                    return rmt_get_status();
+                });
+                switch(result)
+                {
+                case rmt_nomem:
+                    printf("IR signal too complex.\n");
+                    break;
+                case rmt_interrupted:
+                    printf("Interrupted.\n");
+                    break;
+                case rmt_done:
+                    // done; save the data
+                    run_in_main_thread([&numstr] () -> int {
+                        rmt_save(numstr + String(".rmt"));
+                        return 0;
+                    });
+                    break;
+                default:
+                    break; // unknown state ...?
+                }
+                // clear rmt state
+                run_in_main_thread([] () -> int {
+                    rmt_clear();
+                    return 0;
+                });
+                return 0;
+            }
+            return 0;
+         }
+    };
+}
+
 
 namespace cmd_reboot
 {
@@ -548,6 +682,7 @@ void init_console_commands()
     static cmd_wifi_scan::_cmd wifi_scan_cmd;
     static cmd_wifi_wps::_cmd wifi_wps_cmd;
     static cmd_ntp::_cmd ntp_cmd;
+    static cmd_rmt::_cmd rmt_cmd;
     static cmd_reboot::_cmd reboot_cmd;
     static cmd_t::_cmd t_cmd;
 }

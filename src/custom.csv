@@ -8,3 +8,5 @@ conf,     data, spiffs,  0x280000, 0x10000,
 font,     0x40, 0,       0x290000,0x170000,
 # note: keep that font start address written in extra_script.py, and the address written above, are in sync.
 # TODO: take the address automatically from the csv file
+# TODO: expand conf space to 500kB. RMT data is stored in conf space,
+# TODO: which is too small to store.
