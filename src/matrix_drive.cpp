@@ -263,9 +263,12 @@ static void init_dma() {
 
 	// f(i2s) = fpll / (clkm_div_num + clkm_div_b / clkm_div_a)
 	// fpll = defaults to PLL_D2_CLK, 160MHz
+	// eg. clkm_div_num = 11, clkm_div_a = 1, clkm_div_b = 1,
+	//    tx_bck_div_num = 2 : 
+	// the clock rate = 160MHz / (11+1/1) / 2 = 6.666... MHz
 	I2S1.clkm_conf.clkm_div_a=1;
 	I2S1.clkm_conf.clkm_div_b=1;
-	I2S1.clkm_conf.clkm_div_num=7; // min 2
+	I2S1.clkm_conf.clkm_div_num=11; // min 2
 
 	I2S1.fifo_conf.val=0;
 	I2S1.fifo_conf.rx_fifo_mod_force_en=1;
@@ -422,18 +425,18 @@ time frame:
 16*8 = 128 clocks     :    Pixel brightness data(1) for next line 
 16*8 = 128 clocks     :    Pixel brightness data(2) for next line 
               : 
-16*8 = 128 clocks     :    Pixel brightness data(8) for next line 
+16*8 = 128 clocks     :    Pixel brightness data(11) for next line 
 
-896 clocks            :    dummy
+512 clocks            :    dummy
 
 ------------------    2048 clock boundary
 
-16*8 = 128 clocks     :    Pixel brightness data(9) for next line
+16*8 = 128 clocks     :    Pixel brightness data(12) for next line
               :
 16*8 = 128 clocks     :    Pixel brightness data(14) for next line 
 
 
-848 clocks           :    dummy
+1232 clocks           :    dummy
 
  -- 2048 + 1616 clock boundary
 
@@ -450,14 +453,14 @@ time frame:
 
 For WS2812 drive, we'll use following timing scheme:
 
-code '0' H : 0.3ns (the spec is 0.35us ± 150ns)
-code '0' L : 0.9ns (the spec is 0.8 us ± 150ns)
+code '0' H : 0.3us (the spec is 0.35us ± 150ns)
+code '0' L : 0.9us (the spec is 0.8 us ± 150ns)
 code '1' H : 0.6us (the spec is 0.7 us ± 150ns)
 code '1' L : 0.6us (the spec is 0.6 us ± 150ns)
 
-@ drive clk = 10MHz, each code takes 12 clocks;
+@ drive clk = 6.666...MHz, each code takes 8 clocks;
 for example 49 status LEDs, required I2S clocks are :
-	49*12*24 = 14112 clocls
+	49*8*24 = 9408 clocls
 
 it's far large compared to one line clock (4096 clocks), so
 we need to spread them over multiple lines.
@@ -473,7 +476,7 @@ static int IRAM_ATTR build_brightness(buf_t *buf, int row, int n)
 		int x = i * 8 + (n >> 1);
 		int y = (row << 1) + (n & 1);
 
-		uint32_t br = /*x==y ? 0xaaa: 0;// */gamma_table[array[y][x]];
+		uint32_t br = /*(x%48)==y ? 0xaaa: 0;// */gamma_table[array[y][x]];
 
 		buf[ 0] = (br & (1<<15)) ? B_COLSER : 0;
 		buf[ 1] = (br & (1<<14)) ? B_COLSER : 0;
@@ -500,10 +503,10 @@ static int IRAM_ATTR build_brightness(buf_t *buf, int row, int n)
 				buf[11] = (br & (1<< 4)) ? B_COLSER : 0;
 			}
 
-			buf[12] |= (br & (1<< 3)) ? (B_COLSER|B_COLLATCH) : B_COLLATCH;
-			buf[13] |= (br & (1<< 2)) ? (B_COLSER|B_COLLATCH) : B_COLLATCH;
-			buf[14] |= (br & (1<< 1)) ? (B_COLSER|B_COLLATCH) : B_COLLATCH;
-			buf[15] |= (br & (1<< 0)) ? (B_COLSER|B_COLLATCH) : B_COLLATCH;
+			buf[12] = (br & (1<< 3)) ? (B_COLSER|B_COLLATCH) : B_COLLATCH;
+			buf[13] = (br & (1<< 2)) ? (B_COLSER|B_COLLATCH) : B_COLLATCH;
+			buf[14] = (br & (1<< 1)) ? (B_COLSER|B_COLLATCH) : B_COLLATCH;
+			buf[15] = (br & (1<< 0)) ? (B_COLSER|B_COLLATCH) : B_COLLATCH;
 		}
 		else
 		{
@@ -553,15 +556,19 @@ static int IRAM_ATTR build_set_led1642_reg(buf_t *buf, int reg, uint16_t val)
 
 static int slb_i_save;
 static uint32_t slb_b_save;
+static uint32_t slb_v_save;
 static int slb_p_save;
 s_rgb_t status_led_array[MAX_STATUS_LED];
 
-void IRAM_ATTR build_status_led_bits_reset() { slb_i_save = 0; slb_b_save = 0; slb_p_save = 0;}
+void IRAM_ATTR build_status_led_bits_reset() { 
+		slb_i_save = 0; slb_b_save = 0; slb_p_save = 0;
+	status_led_array[0].value += 0x04;
+}
 
 void IRAM_ATTR build_status_led_bits(buf_t * buf, int max_items)
 {
 	// build status LED drive signal.
-	// assuming the driving clock is 10MHz.
+	// assuming the driving clock is 6.6666...MHz.
 	// we'll check max_items at 4 items interval for
 	// speed optimization.
 
@@ -574,15 +581,17 @@ void IRAM_ATTR build_status_led_bits(buf_t * buf, int max_items)
 	int count = max_items;
 	int i = slb_i_save;
 	uint32_t b = slb_b_save;
+	uint32_t v = slb_v_save;
 	switch(slb_p_save)
 	{
 	default:
 	case 0:
-		for(i = 0; i < MAX_STATUS_LED; ++i)
+		for(i = MAX_STATUS_LED-1; i >= 0; --i)
 		{
+			v = status_led_array[i].value;
 			for(b = (1u<<23); b; b>>=1)
 			{
-				if(status_led_array[i].value & b)
+				if(v & b)
 				{
 					// code '1': H 0.6us, L 0.6us
 					buf[ 0] |= B_STATUSLED;
@@ -590,8 +599,6 @@ void IRAM_ATTR build_status_led_bits(buf_t * buf, int max_items)
 					buf[ 2] |= B_STATUSLED;
 					buf[ 3] |= B_STATUSLED;
 					PHASE_CHECK(1)
-					buf[ 4] |= B_STATUSLED;
-					buf[ 5] |= B_STATUSLED;
 					PHASE_CHECK(2)
 				}
 				else
@@ -599,11 +606,10 @@ void IRAM_ATTR build_status_led_bits(buf_t * buf, int max_items)
 					// code '0': H 0.3us, L 0.9us
 					buf[ 0] |= B_STATUSLED;
 					buf[ 1] |= B_STATUSLED;
-					buf[ 2] |= B_STATUSLED;
 					PHASE_CHECK(3)
 					PHASE_CHECK(4)
 				}
-				buf += 12;
+				buf += 8;
 				PHASE_CHECK(5)
 			}
 		}
@@ -612,6 +618,7 @@ void IRAM_ATTR build_status_led_bits(buf_t * buf, int max_items)
 quit:
 	slb_i_save = i;
 	slb_b_save = b;
+	slb_v_save = v;
 }
 
 
@@ -644,7 +651,7 @@ void IRAM_ATTR build_first_half()
 	}
 
 	// build status led data
-	build_status_led_bits(buf, 2048);
+//	build_status_led_bits(buf, 2048);
 
 	// word order shuffle
 	shuffle_bytes(buf, 2048);
@@ -698,8 +705,8 @@ void IRAM_ATTR build_second_half()
 
 
 	// build status led data
-	if(r == 0) { build_status_led_bits_reset(); }
-	build_status_led_bits(buf + 2048, 2048);
+//	if(r == 0) { build_status_led_bits_reset(); }
+//	build_status_led_bits(buf + 2048, 2048);
  
 	// word order shuffle
 	shuffle_bytes(buf + 2048, 2048);

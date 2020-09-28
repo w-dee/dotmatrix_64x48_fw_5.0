@@ -1,7 +1,7 @@
 #pragma once
 
 
-#define MAX_STATUS_LED 1//49
+#define MAX_STATUS_LED 1
 struct s_rgb_t
 {
     union
