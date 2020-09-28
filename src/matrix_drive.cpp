@@ -27,7 +27,7 @@
 #define IO_HC595SEROUT 34
 #define IO_LED1642_RST 13
 #define IO_BUTTONSENSE 35
-
+#define IO_STATUSLED 4
 
 /**
  * GPIO initialize
@@ -42,6 +42,7 @@ static void led_gpio_init()
 	pinMode(IO_HC595SEROUT, INPUT);
 	pinMode(IO_LED1642_RST, OUTPUT);
 	pinMode(IO_BUTTONSENSE, INPUT);
+	pinMode(IO_STATUSLED, OUTPUT);
 
 	// note: software reset (SW_CPU_RESET) seems
 	// that it *does not* reset the pin matrix assignment.
@@ -50,11 +51,12 @@ static void led_gpio_init()
 	pinMatrixOutDetach(IO_COLSER, false, false); // bit 0
 	pinMatrixOutDetach(IO_COLLATCH, false, false); // bit 1
 	pinMatrixOutDetach(IO_ROWLATCH, false, false); // bit 2
+	pinMatrixOutDetach(IO_STATUSLED, false, false); // bit 3
 
 }
 
 /**
- * Make any GPIO driving LED1642 low
+ * Make any GPIO driving LED1642 and WS2812 low
  * */
 static void led_gpio_set_low()
 {
@@ -64,6 +66,7 @@ static void led_gpio_set_low()
 	digitalWrite(IO_COLLATCH, LOW);
 	digitalWrite(IO_ROWLATCH, LOW);
 	digitalWrite(IO_LED1642_RST, LOW);
+	digitalWrite(IO_STATUSLED, LOW);
 }
 
 
@@ -217,7 +220,7 @@ static volatile lldesc_t *dmaDesc;
 static void init_dma() {
 
 	// enable the peripheral
-	periph_module_enable(PERIPH_I2S0_MODULE);
+	periph_module_enable(PERIPH_I2S1_MODULE);
 
 	// allocate memories
 	// note that MALOC_CAP_DMA ensures the memories are reachable from DMA hardware
@@ -226,79 +229,76 @@ static void init_dma() {
 	memset((void*)dmaDesc, 0, (BUFSZ / MAX_DMA_ITEM_COUNT) * sizeof(lldesc_t));
 
 	//Init pins to i2s functions
-	pinMatrixOutAttach(IO_COLCLK, I2S0O_WS_OUT_IDX, false, false);
+	pinMatrixOutAttach(IO_COLCLK, I2S1O_WS_OUT_IDX, false, false);
 
-	pinMatrixOutAttach(IO_COLSER, I2S0O_DATA_OUT8_IDX, false, false); // bit 0
-	pinMatrixOutAttach(IO_COLLATCH, I2S0O_DATA_OUT9_IDX, false, false); // bit 1
-	pinMatrixOutAttach(IO_ROWLATCH,  I2S0O_DATA_OUT10_IDX, false, false); // bit 2
-
-	// enable apll
-	rtc_clk_apll_enable(1, 0, 0, 6, 1); // 1, sdm0, sdm1, sdm2, odir
+	pinMatrixOutAttach(IO_COLSER, I2S1O_DATA_OUT8_IDX, false, false); // bit 0
+	pinMatrixOutAttach(IO_COLLATCH, I2S1O_DATA_OUT9_IDX, false, false); // bit 1
+	pinMatrixOutAttach(IO_ROWLATCH,  I2S1O_DATA_OUT10_IDX, false, false); // bit 2
 
 	//Reset I2S subsystem
-	I2S0.conf.rx_reset=1; I2S0.conf.tx_reset=1;
-	I2S0.conf.rx_reset=0; I2S0.conf.tx_reset=0;
+	I2S1.conf.rx_reset=1; I2S1.conf.tx_reset=1;
+	I2S1.conf.rx_reset=0; I2S1.conf.tx_reset=0;
 
-	I2S0.conf2.val=0;
-	I2S0.conf2.lcd_en=1;
+	I2S1.conf2.val=0;
+	I2S1.conf2.lcd_en=1;
 
 	// Both I2S_LCD_TX_SDX2_EN bit and
 	// I2S_LCD_TX_WRX2_EN bit are set to 1 in the data frame, form 2
-	I2S0.conf2.lcd_tx_wrx2_en = 0;
-	I2S0.conf2.lcd_tx_sdx2_en = 0;
+	I2S1.conf2.lcd_tx_wrx2_en = 0;
+	I2S1.conf2.lcd_tx_sdx2_en = 0;
 
 
-	I2S0.sample_rate_conf.rx_bits_mod=16;
-	I2S0.sample_rate_conf.tx_bits_mod=16;
-	I2S0.sample_rate_conf.rx_bck_div_num=4; // min 2
-	I2S0.sample_rate_conf.tx_bck_div_num=4; // min 2
+	I2S1.sample_rate_conf.rx_bits_mod=16;
+	I2S1.sample_rate_conf.tx_bits_mod=16;
+	I2S1.sample_rate_conf.rx_bck_div_num=4; // min 2
+	I2S1.sample_rate_conf.tx_bck_div_num=4; // min 2
 
-	I2S0.clkm_conf.val=0;
-	I2S0.clkm_conf.clka_en=0;
-	I2S0.clkm_conf.clk_en=0;
-	I2S0.clkm_conf.clkm_div_a=0;
-	I2S0.clkm_conf.clkm_div_b=0;
-	I2S0.clkm_conf.clkm_div_num=1;
+	I2S1.clkm_conf.val=0;
+	I2S1.clkm_conf.clka_en=0;
+	I2S1.clkm_conf.clk_en=0;
+	I2S1.clkm_conf.clkm_div_a=0;
+	I2S1.clkm_conf.clkm_div_b=0;
+	I2S1.clkm_conf.clkm_div_num=1;
 
-	I2S0.fifo_conf.val=0;
-	I2S0.fifo_conf.rx_fifo_mod_force_en=1;
-	I2S0.fifo_conf.tx_fifo_mod_force_en=1;
-	I2S0.fifo_conf.rx_fifo_mod=1;
-	I2S0.fifo_conf.tx_fifo_mod=1;
-	I2S0.fifo_conf.rx_data_num=32;
-	I2S0.fifo_conf.tx_data_num=32;
+	I2S1.fifo_conf.val=0;
+	I2S1.fifo_conf.rx_fifo_mod_force_en=1;
+	I2S1.fifo_conf.tx_fifo_mod_force_en=1;
+	I2S1.fifo_conf.rx_fifo_mod=1;
+	I2S1.fifo_conf.tx_fifo_mod=1;
+	I2S1.fifo_conf.rx_data_num=32;
+	I2S1.fifo_conf.tx_data_num=32;
 
-	I2S0.conf1.val=0;
-	I2S0.conf1.tx_stop_en=1;
-	I2S0.conf1.tx_pcm_bypass=1;
+	I2S1.conf1.val=0;
+	I2S1.conf1.tx_stop_en=1;
+	I2S1.conf1.tx_pcm_bypass=1;
 
-	I2S0.conf_chan.val=0;
-	I2S0.conf_chan.tx_chan_mod=1;
-	I2S0.conf_chan.rx_chan_mod=1;
+	I2S1.conf_chan.val=0;
+	I2S1.conf_chan.tx_chan_mod=1;
+	I2S1.conf_chan.rx_chan_mod=1;
 
 	//Invert WS to active-low
-	I2S0.conf.tx_right_first=0;
-	I2S0.conf.rx_right_first=0;
+	I2S1.conf.tx_right_first=0;
+	I2S1.conf.rx_right_first=0;
 	
-	I2S0.timing.val=0;
+	I2S1.timing.val=0;
 
 	// setup interrupts
-	esp_intr_alloc(ETS_I2S0_INTR_SOURCE + 0 /*i2s0*/, ESP_INTR_FLAG_IRAM, i2s_int_hdl, (void*)nullptr, nullptr);
+	esp_intr_alloc(ETS_I2S1_INTR_SOURCE + 0 /*I2S1*/, ESP_INTR_FLAG_IRAM, i2s_int_hdl, (void*)nullptr, nullptr);
 
 
 	//Reset I2S FIFO
-	I2S0.conf.tx_reset=1;
-	I2S0.conf.tx_fifo_reset=1;
-	I2S0.conf.rx_fifo_reset=1; // I don't know again, rx fifo must also be reset
-	I2S0.conf.tx_reset=0;
-	I2S0.conf.tx_fifo_reset=0;
-	I2S0.conf.rx_fifo_reset=0; 
+	I2S1.conf.tx_reset=1;
+	I2S1.conf.tx_fifo_reset=1;
+	I2S1.conf.rx_fifo_reset=1; // I don't know again, rx fifo must also be reset
+	I2S1.conf.tx_reset=0;
+	I2S1.conf.tx_fifo_reset=0;
+	I2S1.conf.rx_fifo_reset=0; 
 
 	//Reset DMA
-	I2S0.lc_conf.in_rst=1; // I don't know why but 'in link' must be reset as also as 'out link'
-	I2S0.lc_conf.out_rst=1;
-	I2S0.lc_conf.in_rst=0;
-	I2S0.lc_conf.out_rst=0;
+	I2S1.lc_conf.in_rst=1; // I don't know why but 'in link' must be reset as also as 'out link'
+	I2S1.lc_conf.out_rst=1;
+	I2S1.lc_conf.in_rst=0;
+	I2S1.lc_conf.out_rst=0;
 
 	//Fill DMA descriptor, each MAX_DMA_ITEM_COUNT entries
 	volatile lldesc_t * pdma = dmaDesc;
@@ -326,11 +326,11 @@ static void init_dma() {
 	dmaDesc[2].eof = 1; // make sure these blocks generates the interrupt
 
 	//Set desc addr
-	I2S0.out_link.addr=((uint32_t)(&(dmaDesc[0])))&I2S_OUTLINK_ADDR;
+	I2S1.out_link.addr=((uint32_t)(&(dmaDesc[0])))&I2S_OUTLINK_ADDR;
 
 
 	//Enable and configure DMA
-	I2S0.lc_conf.val= 	typeof(I2S0.lc_conf)  { {
+	I2S1.lc_conf.val= 	typeof(I2S1.lc_conf)  { {
             .in_rst =             0,
             .out_rst =            0,
             .ahbm_fifo_rst =      0,
@@ -349,22 +349,22 @@ static void init_dma() {
 
 
 	//Clear int flags
-	I2S0.int_clr.val=0xFFFFFFFF;
+	I2S1.int_clr.val=0xFFFFFFFF;
 
 
-	I2S0.fifo_conf.dscr_en=1;
+	I2S1.fifo_conf.dscr_en=1;
 
 	//Start transmission
-	I2S0.out_link.start=1;
+	I2S1.out_link.start=1;
 
 	// make sure that DMA reads required descriptors and push its first data to FIFO
-	while(I2S0.out_link_dscr == 0 &&
-		I2S0.out_link_dscr_bf0  == 0 &&
-		I2S0.out_link_dscr_bf1 == 0) /**/;
+	while(I2S1.out_link_dscr == 0 &&
+		I2S1.out_link_dscr_bf0  == 0 &&
+		I2S1.out_link_dscr_bf1 == 0) /**/;
 
-	I2S0.conf.tx_start=1;
+	I2S1.conf.tx_start=1;
 
-	I2S0.int_ena.out_eof = 1; // enable outband eof interrupt
+	I2S1.int_ena.out_eof = 1; // enable outband eof interrupt
 
 
 }
@@ -632,8 +632,8 @@ static volatile int intr_count = 0;
 // i2s interrupt handler
 static void IRAM_ATTR i2s_int_hdl(void *arg) {
 	++intr_count;
-	if (I2S0.int_st.out_eof) {
-		I2S0.int_clr.val = I2S0.int_st.val;
+	if (I2S1.int_st.out_eof) {
+		I2S1.int_clr.val = I2S1.int_st.val;
 		matrix_drive_fill_buffer();
 	}
 }
