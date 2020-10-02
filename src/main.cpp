@@ -11,6 +11,8 @@
 
 void setup() {
   // put your setup code here, to run once:
+  matrix_drive_early_setup(); // blank all leds
+
   delay(3000);
 
   matrix_drive_setup();

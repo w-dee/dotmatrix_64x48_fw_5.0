@@ -12,6 +12,7 @@
 #include "driver/rtc_io.h"
 #include "soc/rtc.h"
 #include "driver/rtc_io.h"
+#include "driver/uart.h"
 
 #include "matrix_drive.h"
 #include "frame_buffer.h"
@@ -43,11 +44,6 @@ static void led_gpio_init()
 	pinMode(IO_LED1642_RST, OUTPUT);
 	pinMode(IO_BUTTONSENSE, INPUT);
 	pinMode(IO_STATUSLED, OUTPUT);
-
-
-	pinMode(25, OUTPUT); // debug
-	pinMode(26, OUTPUT); // debug
-	pinMode(27, OUTPUT); // debug
 
 	// note: software reset (SW_CPU_RESET) seems
 	// that it *does not* reset the pin matrix assignment.
@@ -96,6 +92,7 @@ static void led_hard_reset_led1642()
 	// wait for a while
 	delay(10);
 }
+
 
 
 /**
@@ -528,6 +525,7 @@ static int IRAM_ATTR build_brightness(buf_t *buf, int row, int n)
 	return NUM_LED1642 * 16;
 } 
 
+/*
 static int IRAM_ATTR build_set_led1642_reg(buf_t *buf, int reg, uint16_t val)
 {
 	for(int i = 0; i < NUM_LED1642; ++i)
@@ -553,7 +551,9 @@ static int IRAM_ATTR build_set_led1642_reg(buf_t *buf, int reg, uint16_t val)
 
 	return NUM_LED1642 * 16;
 }
+*/
 
+// build resister for resister no. 2
 static int IRAM_ATTR build_set_led1642_reg_2(buf_t *buf, uint16_t val)
 {
 //	return build_set_led1642_reg(buf, 2, val);
@@ -594,7 +594,6 @@ static int slb_i_save;
 s_rgb_t status_led_array[MAX_STATUS_LED];
 uint32_t status_led_buf[MAX_STATUS_LED * 3 / 4];
 #define status_led_buf_sz (sizeof(status_led_buf) / sizeof(status_led_buf[0]))
-
 
 // transform status led array data to more
 // interrupt-routine friendly one.
@@ -809,43 +808,21 @@ static void IRAM_ATTR scan_button()
 }
 
 
+// interrupt routine invoked by DMA eof signal
 static void IRAM_ATTR matrix_drive_fill_buffer()
 {
-	// TODO: check: The owner flag we see here is always
-	// consistent with eof interrupt; it should be.
-
 	if(dmaDesc[1].owner == 0)
 	{
-		digitalWrite(25, 1);
 		dmaDesc[1].owner = 1;
 		build_first_half();
 		scan_button();
 	}
 	if(dmaDesc[3].owner == 0)
 	{
-		digitalWrite(26, 1);
 		dmaDesc[3].owner = 1;
 		build_second_half();
 		++r;
 		if(r >= 24) r = 0;
-	}
-/*
-	if(dmaDesc[2].owner == 0)
-	{
-		digitalWrite(27, 1);
-		dmaDesc[2].owner = 1;
-	}
-
-	if(dmaDesc[0].owner == 0)
-	{
-		dmaDesc[0].owner = 1;
-	}
-*/
-	for(uint i = 0; i < 10; ++i)
-	{
-		digitalWrite(25, 0);
-		digitalWrite(26, 0);
-		digitalWrite(27, 0);
 	}
 }
 
@@ -869,18 +846,116 @@ void matrix_drive_loop() {
 }
 
 
+
+// drive WS2812 without matrix driver involved
+void drive_status_led_no_matrix()
+{
+	// we use here inverted UART to transmit WS2812 signals.
+	// using 3.333...MHz baud rate and 6bit transmission mode and
+	// output inversion enabled,
+	//  st  0  1  2  3  4  5  sp
+	//   1  x  x  x  x  x  x  0 
+	// above waveform can be transmitted. 
+	// we can use two WS2812 bit in one transmittion unit:
+	// upper nibble and lower nibble.
+	// each nibble can be:
+	// for WS2812's 0 symbol:   0b 1000
+	// for WS2812's 1 symbol:   0b 1100
+
+	// for prepareing the data, use commit_status_led_no_matrix() instead of
+	// commit_status_led();
+
+	// setup uart config
+	uart_config_t uart_config = {
+			.baud_rate = 3333333,
+			.data_bits = UART_DATA_6_BITS,
+			.parity = UART_PARITY_DISABLE,
+			.stop_bits = UART_STOP_BITS_1,
+			.flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+			.rx_flow_ctrl_thresh = 120,
+			.use_ref_tick = 0,
+	};
+	
+	ESP_ERROR_CHECK(uart_param_config(UART_NUM_2, &uart_config));
+	ESP_ERROR_CHECK(uart_set_pin(UART_NUM_2, IO_STATUSLED, UART_PIN_NO_CHANGE,
+		UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
+	REG_SET_BIT(GPIO_FUNC4_OUT_SEL_CFG_REG, GPIO_FUNC4_OUT_INV_SEL); // output invert
+
+	ESP_ERROR_CHECK(uart_driver_install(UART_NUM_2, 256, 0, 8, nullptr, 0));
+
+	uart_write_bytes(UART_NUM_2, (const char *)status_led_buf, MAX_STATUS_LED * 24 / 2);
+	ESP_ERROR_CHECK(uart_wait_tx_done(UART_NUM_2, 600));
+	ESP_ERROR_CHECK(uart_driver_delete(UART_NUM_2));
+}
+
+
+// transform status led array data to use with drive_status_led_no_matrix
+void commit_status_led_no_matrix()
+{
+#define SYMBOL_H_LOWER_NIBBLE (0b110<<0)
+#define SYMBOL_L_LOWER_NIBBLE (0b111<<0)
+#define SYMBOL_H_UPPER_NIBBLE (0b100<<3)
+#define SYMBOL_L_UPPER_NIBBLE (0b110<<3)
+
+
+	// packs status_led_array's 24 bit values into status_led_buf's 32bit values
+	uint8_t *buf = (uint8_t*)status_led_buf;
+	for(int i = 0; i < MAX_STATUS_LED; ++i)
+	{
+		uint32_t v = status_led_array[i].value;
+		buf[0] =
+			( v & (1<<23) ? SYMBOL_H_LOWER_NIBBLE : SYMBOL_L_LOWER_NIBBLE ) |
+			( v & (1<<22) ? SYMBOL_H_UPPER_NIBBLE : SYMBOL_L_UPPER_NIBBLE ) ;
+		buf[1] =
+			( v & (1<<21) ? SYMBOL_H_LOWER_NIBBLE : SYMBOL_L_LOWER_NIBBLE ) |
+			( v & (1<<20) ? SYMBOL_H_UPPER_NIBBLE : SYMBOL_L_UPPER_NIBBLE ) ;
+		buf[2] =
+			( v & (1<<19) ? SYMBOL_H_LOWER_NIBBLE : SYMBOL_L_LOWER_NIBBLE ) |
+			( v & (1<<18) ? SYMBOL_H_UPPER_NIBBLE : SYMBOL_L_UPPER_NIBBLE ) ;
+		buf[3] =
+			( v & (1<<17) ? SYMBOL_H_LOWER_NIBBLE : SYMBOL_L_LOWER_NIBBLE ) |
+			( v & (1<<16) ? SYMBOL_H_UPPER_NIBBLE : SYMBOL_L_UPPER_NIBBLE ) ;
+		buf[4] =
+			( v & (1<<15) ? SYMBOL_H_LOWER_NIBBLE : SYMBOL_L_LOWER_NIBBLE ) |
+			( v & (1<<14) ? SYMBOL_H_UPPER_NIBBLE : SYMBOL_L_UPPER_NIBBLE ) ;
+		buf[5] =
+			( v & (1<<13) ? SYMBOL_H_LOWER_NIBBLE : SYMBOL_L_LOWER_NIBBLE ) |
+			( v & (1<<12) ? SYMBOL_H_UPPER_NIBBLE : SYMBOL_L_UPPER_NIBBLE ) ;
+		buf[6] =
+			( v & (1<<11) ? SYMBOL_H_LOWER_NIBBLE : SYMBOL_L_LOWER_NIBBLE ) |
+			( v & (1<<10) ? SYMBOL_H_UPPER_NIBBLE : SYMBOL_L_UPPER_NIBBLE ) ;
+		buf[7] =
+			( v & (1<< 9) ? SYMBOL_H_LOWER_NIBBLE : SYMBOL_L_LOWER_NIBBLE ) |
+			( v & (1<< 8) ? SYMBOL_H_UPPER_NIBBLE : SYMBOL_L_UPPER_NIBBLE ) ;
+		buf[8] =
+			( v & (1<< 7) ? SYMBOL_H_LOWER_NIBBLE : SYMBOL_L_LOWER_NIBBLE ) |
+			( v & (1<< 6) ? SYMBOL_H_UPPER_NIBBLE : SYMBOL_L_UPPER_NIBBLE ) ;
+		buf[9] =
+			( v & (1<< 5) ? SYMBOL_H_LOWER_NIBBLE : SYMBOL_L_LOWER_NIBBLE ) |
+			( v & (1<< 4) ? SYMBOL_H_UPPER_NIBBLE : SYMBOL_L_UPPER_NIBBLE ) ;
+		buf[10] =
+			( v & (1<< 3) ? SYMBOL_H_LOWER_NIBBLE : SYMBOL_L_LOWER_NIBBLE ) |
+			( v & (1<< 2) ? SYMBOL_H_UPPER_NIBBLE : SYMBOL_L_UPPER_NIBBLE ) ;
+		buf[11] =
+			( v & (1<< 1) ? SYMBOL_H_LOWER_NIBBLE : SYMBOL_L_LOWER_NIBBLE ) |
+			( v & (1<< 0) ? SYMBOL_H_UPPER_NIBBLE : SYMBOL_L_UPPER_NIBBLE ) ;
+		buf += 12;
+	}
+}
+
+
+
+
 static void refresh_task(void* arg);
 
+void matrix_drive_early_setup()
+{
+	// blank all status LEDs
+	memset(status_led_array, 0, sizeof(status_led_array));
+	commit_status_led_no_matrix();
+	drive_status_led_no_matrix();
 
-void matrix_drive_setup() {
-	puts("Matrix LED driver initializing ...");
-
-
-	frame_buffer_t::array_t & array = get_current_frame_buffer().array();
-	for(int y = 0; y < 48; ++y)
-		for(int x = 0; x < 64; ++x)
-			array[y][x] = 255;
-
+	// blank all matrix LEDs
 	led_gpio_init();
 
 	led_gpio_set_low();
@@ -905,6 +980,19 @@ void matrix_drive_setup() {
 		led_config += 0b111111 | (1<<6); // set current gain
 		led_post_set_led1642_reg(7, led_config); // set control register
 	}
+
+	led_post_set_led1642_reg(2, 0); // all blank
+}
+
+void matrix_drive_setup() {
+	puts("Matrix LED driver initializing ...");
+
+	frame_buffer_t::array_t & array = get_current_frame_buffer().array();
+	for(int y = 0; y < 48; ++y)
+		for(int x = 0; x < 64; ++x)
+			array[y][x] = 255;
+
+
 
 	led_post();
 
@@ -982,9 +1070,9 @@ static void refresh_task(void* arg) {
 		memcpy(array[y], buffer[y] + 10, 64);
 	}
 
-	status_led_array[0].b = 128;
+	status_led_array[0].b = 16;
 	status_led_array[0].g = 0;
-	status_led_array[0].r = 128;
+	status_led_array[0].r = 16;
 	commit_status_led();
 
   }
