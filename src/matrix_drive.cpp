@@ -44,6 +44,11 @@ static void led_gpio_init()
 	pinMode(IO_BUTTONSENSE, INPUT);
 	pinMode(IO_STATUSLED, OUTPUT);
 
+
+	pinMode(25, OUTPUT); // debug
+	pinMode(26, OUTPUT); // debug
+	pinMode(27, OUTPUT); // debug
+
 	// note: software reset (SW_CPU_RESET) seems
 	// that it *does not* reset the pin matrix assignment.
 	// so we will need to reset them at here.
@@ -331,8 +336,8 @@ static void init_dma() {
 	}
 
 	pdma[-1].empty = (int32_t)(&dmaDesc[0]); // make loop
-	dmaDesc[0].eof = 1;
-	dmaDesc[2].eof = 1; // make sure these blocks generates the interrupt
+	dmaDesc[1].eof = 1;
+	dmaDesc[3].eof = 1; // make sure these blocks generates the interrupt
 
 	//Set desc addr
 	I2S1.out_link.addr=((uint32_t)(&(dmaDesc[0])))&I2S_OUTLINK_ADDR;
@@ -460,7 +465,7 @@ code '1' L : 0.6us (the spec is 0.6 us ± 150ns)
 
 @ drive clk = 6.666...MHz, each code takes 8 clocks;
 for example 49 status LEDs, required I2S clocks are :
-	49*8*24 = 9408 clocls
+	49*8*24 = 9408 clocks
 
 it's far large compared to one line clock (4096 clocks), so
 we need to spread them over multiple lines.
@@ -549,76 +554,138 @@ static int IRAM_ATTR build_set_led1642_reg(buf_t *buf, int reg, uint16_t val)
 	return NUM_LED1642 * 16;
 }
 
+static int IRAM_ATTR build_set_led1642_reg_2(buf_t *buf, uint16_t val)
+{
+//	return build_set_led1642_reg(buf, 2, val);
 
-// status led bit builder is somewhat complex
-// because the status led item cycle(12 clocks)
-// does not meet 2048 clock half-line boundary
+	for(int i = 0; i < NUM_LED1642; ++i)
+	{
+		buf[ 0] = (val & (1<<15)) ? B_COLSER : 0;
+		buf[ 1] = (val & (1<<14)) ? B_COLSER : 0;
+		buf[ 2] = (val & (1<<13)) ? B_COLSER : 0;
+		buf[ 3] = (val & (1<<12)) ? B_COLSER : 0;
+		buf[ 4] = (val & (1<<11)) ? B_COLSER : 0;
+		buf[ 5] = (val & (1<<10)) ? B_COLSER : 0;
+		buf[ 6] = (val & (1<< 9)) ? B_COLSER : 0;
+		buf[ 7] = (val & (1<< 8)) ? B_COLSER : 0;
+		buf[ 8] = (val & (1<< 7)) ? B_COLSER : 0;
+		buf[ 9] = (val & (1<< 6)) ? B_COLSER : 0;
+		buf[10] = (val & (1<< 5)) ? B_COLSER : 0;
+		buf[11] = (val & (1<< 4)) ? B_COLSER : 0;
+		buf[12] = (val & (1<< 3)) ? B_COLSER : 0;
+		buf[13] = (val & (1<< 2)) ? B_COLSER : 0;
+		if(i == (NUM_LED1642 -1))
+		{
+			buf[14] = (val & (1<< 1)) ? (B_COLSER|B_COLLATCH) : B_COLLATCH;
+			buf[15] = (val & (1<< 0)) ? (B_COLSER|B_COLLATCH) : B_COLLATCH;
+		}
+		else
+		{
+			buf[14] = (val & (1<< 1)) ? B_COLSER : 0;
+			buf[15] = (val & (1<< 0)) ? B_COLSER : 0;
+		}
+		buf += 16;
+	}
 
+	return NUM_LED1642 * 16;
+
+}
 static int slb_i_save;
-static uint32_t slb_b_save;
-static uint32_t slb_v_save;
-static int slb_p_save;
 s_rgb_t status_led_array[MAX_STATUS_LED];
+uint32_t status_led_buf[MAX_STATUS_LED * 3 / 4];
+#define status_led_buf_sz (sizeof(status_led_buf) / sizeof(status_led_buf[0]))
+
+
+// transform status led array data to more
+// interrupt-routine friendly one.
+void commit_status_led()
+{
+	// packs status_led_array's 24 bit values into status_led_buf's 32bit values
+	uint32_t * op = status_led_buf;
+	for(int i = 0; i < MAX_STATUS_LED; i += 4)
+	{
+		uint32_t a,b,c,d;
+		a = status_led_array[i + 0].value;
+		b = status_led_array[i + 1].value;
+		c = status_led_array[i + 2].value;
+		d = status_led_array[i + 3].value;
+		op[0] = ((a & 0x00ffffffu) <<  8) + ((b & 0x00ff0000u) >> 16);
+		op[1] = ((b & 0x0000ffffu) << 16) + ((c & 0x00ffff00u) >>  8);
+		op[2] = ((c & 0x000000ffu) << 24) + ((d & 0x00ffffffu) >>  0);
+		op += 3;
+	}
+}
+
 
 void IRAM_ATTR build_status_led_bits_reset() { 
-		slb_i_save = 0; slb_b_save = 0; slb_p_save = 0;
-	status_led_array[0].value += 0x04;
+	slb_i_save = 0;
 }
 
 void IRAM_ATTR build_status_led_bits(buf_t * buf, int max_items)
 {
 	// build status LED drive signal.
 	// assuming the driving clock is 6.6666...MHz.
-	// we'll check max_items at 4 items interval for
-	// speed optimization.
+	// At that frequency, one symbol (1bit) of
+	// the WS2812 is represented at 8 bit clocks 
+	// of the I2S bitstream.
+	// And one WS2812 word (24bit) is 8*24=192 bit clocks
+	// of the I2S bitstream.
+	// fortunately, at least at this point, max_items
+	// is always 2048, which is integral multiple of
+	// 8, but unfortunately it is not integral multiple
+	// of 192.
+	// umm... so, we use non-time critical function
+	// commit_status_led( ) to prepare data of the
+	// WS2812 bitstream which is easily transmittable
+	// at interrupt routine to reduce interrupting
+	// time.
 
-	// using simple continuation
-	#define PHASE_CHECK(X) \
-			count -= 4; if(count <= 0) {slb_p_save = X; goto quit;} \
-			case X:;
-
-
-	int count = max_items;
+	// process 32bit in a status_led_buf item at one loop unit.
+	uint32_t *buf32 = (uint32_t*)buf;
 	int i = slb_i_save;
-	uint32_t b = slb_b_save;
-	uint32_t v = slb_v_save;
-	switch(slb_p_save)
+	for(int n = 0; i < status_led_buf_sz && n < max_items; ++i, n += 32*8)
 	{
-	default:
-	case 0:
-		for(i = MAX_STATUS_LED-1; i >= 0; --i)
+		uint32_t v = status_led_buf[i];
+#define SYMBOL32_1 \
+						(B_STATUSLED <<  0) +\
+						(B_STATUSLED <<  8) +\
+						(B_STATUSLED << 16) +\
+						(B_STATUSLED << 24) +\
+						0
+#define SYMBOL32_0 \
+						(B_STATUSLED <<  0) +\
+						(B_STATUSLED <<  8) +\
+						0
+#if 0
+		for(uint32_t bit = (1u<<31); bit; bit >>= 1)
 		{
-			v = status_led_array[i].value;
-			for(b = (1u<<23); b; b>>=1)
-			{
-				if(v & b)
-				{
-					// code '1': H 0.6us, L 0.6us
-					buf[ 0] |= B_STATUSLED;
-					buf[ 1] |= B_STATUSLED;
-					buf[ 2] |= B_STATUSLED;
-					buf[ 3] |= B_STATUSLED;
-					PHASE_CHECK(1)
-					PHASE_CHECK(2)
-				}
-				else
-				{
-					// code '0': H 0.3us, L 0.9us
-					buf[ 0] |= B_STATUSLED;
-					buf[ 1] |= B_STATUSLED;
-					PHASE_CHECK(3)
-					PHASE_CHECK(4)
-				}
-				buf += 8;
-				PHASE_CHECK(5)
-			}
+			buf32[0] = (v & bit) ? SYMBOL32_1 : SYMBOL32_0;
+			buf32 += 2;
 		}
-	}
+#else
 
-quit:
+#define ONE_BIT(N) buf32[(N)*2] |= (v & (1<<(31-(N)))) ? SYMBOL32_1 : SYMBOL32_0;
+
+#define FOUR_BITS(N) \
+		ONE_BIT((N)+0) \
+		ONE_BIT((N)+1) \
+		ONE_BIT((N)+2) \
+		ONE_BIT((N)+3)
+
+		FOUR_BITS(0*4)
+		FOUR_BITS(1*4)
+		FOUR_BITS(2*4)
+		FOUR_BITS(3*4)
+		FOUR_BITS(4*4)
+		FOUR_BITS(5*4)
+		FOUR_BITS(6*4)
+		FOUR_BITS(7*4)
+
+
+		buf32 += 2*32; // one symbol takes 8 bytes (two 32bit word)
+#endif
+	}
 	slb_i_save = i;
-	slb_b_save = b;
-	slb_v_save = v;
 }
 
 
@@ -634,12 +701,13 @@ static void IRAM_ATTR shuffle_bytes(buf_t *buf, int count)
 
 static volatile int r = 0; // current row
 
+#define HALF_BUILD_BOUNDARY 11
+
 void IRAM_ATTR build_first_half()
 {
-
 	buf_t *bufp = buf;
 
-	for(int n = 0; n <= 11; ++n)
+	for(int n = 0; n <= HALF_BUILD_BOUNDARY; ++n)
 	{
 		bufp += build_brightness(bufp, r, n);
 	}
@@ -651,8 +719,14 @@ void IRAM_ATTR build_first_half()
 	}
 
 	// build status led data
-//	build_status_led_bits(buf, 2048);
+	if(r == 0) { build_status_led_bits_reset(); }
+	build_status_led_bits(buf, 2048);
 
+/*
+	for(int i = 0; i < 2048; ++i)
+		buf[i] = 0;
+	buf[2047] = 0xff;
+*/
 	// word order shuffle
 	shuffle_bytes(buf, 2048);
 }
@@ -665,7 +739,7 @@ void IRAM_ATTR build_second_half()
 	buf_t *bufp = buf + 2048;
 	buf_t *tmpp;
 
-	for(int n = 12; n <= 14; ++n)
+	for(int n = HALF_BUILD_BOUNDARY+1; n <= 14; ++n)
 	{
 		bufp += build_brightness(bufp, r, n);
 	}
@@ -682,7 +756,7 @@ void IRAM_ATTR build_second_half()
 		*(bufp++) = B_COLSER;
 	}
 
-	bufp += build_set_led1642_reg(bufp, 2, 0x0000); // full LEDs off
+	bufp += build_set_led1642_reg_2(bufp, 0x0000); // full LEDs off
 
 	// row select
 	tmpp = bufp; // remember current position 
@@ -699,17 +773,23 @@ void IRAM_ATTR build_second_half()
 
 	tmpp = bufp; // remember current position
 
-	bufp += build_set_led1642_reg(bufp, 2, 0xffff); // full LEDs on
+	bufp += build_set_led1642_reg_2(bufp, 0xffff); // full LEDs on
 
 	tmpp[0] |= B_ROWLATCH; // let HCT595 latch the buffer
 
 
 	// build status led data
-//	if(r == 0) { build_status_led_bits_reset(); }
-//	build_status_led_bits(buf + 2048, 2048);
- 
+	build_status_led_bits(buf + 2048, 2048);
+
+/* 
+	for(int i = 2048; i < 4096; ++i)
+		buf[i] = 0;
+	buf[4095] = 0xff;
+*/
 	// word order shuffle
 	shuffle_bytes(buf + 2048, 2048);
+
+
 }
 
 
@@ -733,19 +813,39 @@ static void IRAM_ATTR matrix_drive_fill_buffer()
 {
 	// TODO: check: The owner flag we see here is always
 	// consistent with eof interrupt; it should be.
-	if(dmaDesc[1].owner != 1)
+
+	if(dmaDesc[1].owner == 0)
 	{
+		digitalWrite(25, 1);
 		dmaDesc[1].owner = 1;
 		build_first_half();
 		scan_button();
 	}
-
-	if(dmaDesc[3].owner != 1)
+	if(dmaDesc[3].owner == 0)
 	{
+		digitalWrite(26, 1);
 		dmaDesc[3].owner = 1;
 		build_second_half();
 		++r;
 		if(r >= 24) r = 0;
+	}
+/*
+	if(dmaDesc[2].owner == 0)
+	{
+		digitalWrite(27, 1);
+		dmaDesc[2].owner = 1;
+	}
+
+	if(dmaDesc[0].owner == 0)
+	{
+		dmaDesc[0].owner = 1;
+	}
+*/
+	for(uint i = 0; i < 10; ++i)
+	{
+		digitalWrite(25, 0);
+		digitalWrite(26, 0);
+		digitalWrite(27, 0);
 	}
 }
 
@@ -881,6 +981,11 @@ static void refresh_task(void* arg) {
 	{
 		memcpy(array[y], buffer[y] + 10, 64);
 	}
+
+	status_led_array[0].b = 128;
+	status_led_array[0].g = 0;
+	status_led_array[0].r = 128;
+	commit_status_led();
 
   }
 }
