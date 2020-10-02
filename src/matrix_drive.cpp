@@ -862,8 +862,11 @@ void drive_status_led_no_matrix()
 	// for WS2812's 0 symbol:   0b 1000
 	// for WS2812's 1 symbol:   0b 1100
 
-	// for prepareing the data, use commit_status_led_no_matrix() instead of
-	// commit_status_led();
+	// for prepareing the data, do not use commit_status_led();
+	// this function dynamically allocates the buffer it need.
+	// it's important to transmit data without gaps.
+	// if the transmit has a gap by interrupt routine,
+	// suggest invalidating the interrupt while calling this function. 
 
 	// setup uart config
 	uart_config_t uart_config = {
@@ -875,31 +878,15 @@ void drive_status_led_no_matrix()
 			.rx_flow_ctrl_thresh = 120,
 			.use_ref_tick = 0,
 	};
-	
-	ESP_ERROR_CHECK(uart_param_config(UART_NUM_2, &uart_config));
-	ESP_ERROR_CHECK(uart_set_pin(UART_NUM_2, IO_STATUSLED, UART_PIN_NO_CHANGE,
-		UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
-	REG_SET_BIT(GPIO_FUNC4_OUT_SEL_CFG_REG, GPIO_FUNC4_OUT_INV_SEL); // output invert
-
-	ESP_ERROR_CHECK(uart_driver_install(UART_NUM_2, 256, 0, 8, nullptr, 0));
-
-	uart_write_bytes(UART_NUM_2, (const char *)status_led_buf, MAX_STATUS_LED * 24 / 2);
-	ESP_ERROR_CHECK(uart_wait_tx_done(UART_NUM_2, 600));
-	ESP_ERROR_CHECK(uart_driver_delete(UART_NUM_2));
-}
-
-
-// transform status led array data to use with drive_status_led_no_matrix
-void commit_status_led_no_matrix()
-{
 #define SYMBOL_H_LOWER_NIBBLE (0b110<<0)
 #define SYMBOL_L_LOWER_NIBBLE (0b111<<0)
 #define SYMBOL_H_UPPER_NIBBLE (0b100<<3)
 #define SYMBOL_L_UPPER_NIBBLE (0b110<<3)
-
-
-	// packs status_led_array's 24 bit values into status_led_buf's 32bit values
-	uint8_t *buf = (uint8_t*)status_led_buf;
+	
+	uint8_t *buf_allocated = (uint8_t*)malloc(MAX_STATUS_LED * 24 / 2); 
+	if(!buf_allocated) return; // no memory
+	// prepare tx buffer
+	uint8_t *buf = buf_allocated;
 	for(int i = 0; i < MAX_STATUS_LED; ++i)
 	{
 		uint32_t v = status_led_array[i].value;
@@ -941,6 +928,19 @@ void commit_status_led_no_matrix()
 			( v & (1<< 0) ? SYMBOL_H_UPPER_NIBBLE : SYMBOL_L_UPPER_NIBBLE ) ;
 		buf += 12;
 	}
+
+
+	uart_param_config(UART_NUM_2, &uart_config);
+	uart_set_pin(UART_NUM_2, IO_STATUSLED, UART_PIN_NO_CHANGE,
+		UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+	REG_SET_BIT(GPIO_FUNC4_OUT_SEL_CFG_REG, GPIO_FUNC4_OUT_INV_SEL); // output invert
+	uart_driver_install(UART_NUM_2, 256, 0, 8, nullptr, 0);
+
+	uart_write_bytes(UART_NUM_2, (const char *)buf_allocated, MAX_STATUS_LED * 24 / 2);
+	uart_wait_tx_done(UART_NUM_2, 600);
+	uart_driver_delete(UART_NUM_2);
+
+	free(buf_allocated);
 }
 
 
@@ -952,7 +952,6 @@ void matrix_drive_early_setup()
 {
 	// blank all status LEDs
 	memset(status_led_array, 0, sizeof(status_led_array));
-	commit_status_led_no_matrix();
 	drive_status_led_no_matrix();
 
 	// blank all matrix LEDs
