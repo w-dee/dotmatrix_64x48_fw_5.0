@@ -141,7 +141,7 @@ static void led_post()
 		// sense the input pin;
 		// we may need some delay here because
 		// return path driving the input pin is very weak and noisy path.
-		// in practive it seems that there is no need to insert wait here ...
+		// in practice it seems that there is no need to insert wait here ...
 		delayMicroseconds(10);
 		int r = digitalRead(IO_HC595SEROUT);
 		led_print_0_1(r);
@@ -974,7 +974,7 @@ void matrix_drive_early_setup()
 	for(int i = 0; i <NUM_LED1642 * 4; ++i)
 	{
 		uint16_t led_config = 0;
-		led_config += (1<<13);  // enable SDO delay
+		led_config += (1<<13) | (1<<14);  // enable SDO delay and progressive delay
 		led_config += (1<<11) | (1<<12) |(1<<15); // Output turn-on/off time: on:180ns, off:150ns
 		led_config += 0b111111 | (1<<6); // set current gain
 		led_post_set_led1642_reg(7, led_config); // set control register
@@ -1069,9 +1069,12 @@ static void refresh_task(void* arg) {
 		memcpy(array[y], buffer[y] + 10, 64);
 	}
 
-	status_led_array[0].b = 16;
-	status_led_array[0].g = 0;
-	status_led_array[0].r = 16;
+	for(int i = 0; i < MAX_STATUS_LED; ++i)
+	{
+		status_led_array[i].b = i*30;
+		status_led_array[i].g = i*30+120;
+		status_led_array[i].r = i*30 + 180;
+	}
 	commit_status_led();
 
   }
