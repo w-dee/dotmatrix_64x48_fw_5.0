@@ -28,7 +28,7 @@
 #define IO_HC595SEROUT 34
 #define IO_LED1642_RST 13
 #define IO_BUTTONSENSE 35
-#define IO_STATUSLED 4
+
 
 /**
  * GPIO initialize
@@ -43,7 +43,7 @@ static void led_gpio_init()
 	pinMode(IO_HC595SEROUT, INPUT);
 	pinMode(IO_LED1642_RST, OUTPUT);
 	pinMode(IO_BUTTONSENSE, INPUT);
-	pinMode(IO_STATUSLED, OUTPUT);
+
 
 	// note: software reset (SW_CPU_RESET) seems
 	// that it *does not* reset the pin matrix assignment.
@@ -52,7 +52,7 @@ static void led_gpio_init()
 	pinMatrixOutDetach(IO_COLSER, false, false); // bit 0
 	pinMatrixOutDetach(IO_COLLATCH, false, false); // bit 1
 	pinMatrixOutDetach(IO_ROWLATCH, false, false); // bit 2
-	pinMatrixOutDetach(IO_STATUSLED, false, false); // bit 3
+
 
 }
 
@@ -67,7 +67,7 @@ static void led_gpio_set_low()
 	digitalWrite(IO_COLLATCH, LOW);
 	digitalWrite(IO_ROWLATCH, LOW);
 	digitalWrite(IO_LED1642_RST, LOW);
-	digitalWrite(IO_STATUSLED, LOW);
+
 }
 
 
@@ -238,7 +238,6 @@ static void init_dma() {
 	pinMatrixOutAttach(IO_COLSER, I2S1O_DATA_OUT0_IDX, false, false); // bit 0
 	pinMatrixOutAttach(IO_COLLATCH, I2S1O_DATA_OUT1_IDX, false, false); // bit 1
 	pinMatrixOutAttach(IO_ROWLATCH,  I2S1O_DATA_OUT2_IDX, false, false); // bit 2
-	pinMatrixOutAttach(IO_STATUSLED, I2S1O_DATA_OUT3_IDX, false, false); // bit 3
 
 	//Reset I2S subsystem
 	I2S1.conf.rx_reset=1; I2S1.conf.tx_reset=1;
@@ -270,7 +269,7 @@ static void init_dma() {
 	// the clock rate = 160MHz / (11+1/1) / 2 = 6.666... MHz
 	I2S1.clkm_conf.clkm_div_a=1;
 	I2S1.clkm_conf.clkm_div_b=1;
-	I2S1.clkm_conf.clkm_div_num=11; // min 2
+	I2S1.clkm_conf.clkm_div_num=7; // min 2
 
 	I2S1.fifo_conf.val=0;
 	I2S1.fifo_conf.rx_fifo_mod_force_en=1;
@@ -452,21 +451,6 @@ time frame:
 
 	The last 256 clocks in a time frame are dead clocks; all leds are off at this period.
 
-
-For WS2812 drive, we'll use following timing scheme:
-
-code '0' H : 0.3us (the spec is 0.35us ± 150ns)
-code '0' L : 0.9us (the spec is 0.8 us ± 150ns)
-code '1' H : 0.6us (the spec is 0.7 us ± 150ns)
-code '1' L : 0.6us (the spec is 0.6 us ± 150ns)
-
-@ drive clk = 6.666...MHz, each code takes 8 clocks;
-for example 49 status LEDs, required I2S clocks are :
-	49*8*24 = 9408 clocks
-
-it's far large compared to one line clock (4096 clocks), so
-we need to spread them over multiple lines.
-
 */
 
 static int IRAM_ATTR build_brightness(buf_t *buf, int row, int n)
@@ -590,102 +574,6 @@ static int IRAM_ATTR build_set_led1642_reg_2(buf_t *buf, uint16_t val)
 	return NUM_LED1642 * 16;
 
 }
-static int slb_i_save;
-s_rgb_t status_led_array[MAX_STATUS_LED];
-uint32_t status_led_buf[MAX_STATUS_LED * 3 / 4];
-#define status_led_buf_sz (sizeof(status_led_buf) / sizeof(status_led_buf[0]))
-
-// transform status led array data to more
-// interrupt-routine friendly one.
-void commit_status_led()
-{
-	// packs status_led_array's 24 bit values into status_led_buf's 32bit values
-	uint32_t * op = status_led_buf;
-	for(int i = 0; i < MAX_STATUS_LED; i += 4)
-	{
-		uint32_t a,b,c,d;
-		a = status_led_array[i + 0].value;
-		b = status_led_array[i + 1].value;
-		c = status_led_array[i + 2].value;
-		d = status_led_array[i + 3].value;
-		op[0] = ((a & 0x00ffffffu) <<  8) + ((b & 0x00ff0000u) >> 16);
-		op[1] = ((b & 0x0000ffffu) << 16) + ((c & 0x00ffff00u) >>  8);
-		op[2] = ((c & 0x000000ffu) << 24) + ((d & 0x00ffffffu) >>  0);
-		op += 3;
-	}
-}
-
-
-void IRAM_ATTR build_status_led_bits_reset() { 
-	slb_i_save = 0;
-}
-
-void IRAM_ATTR build_status_led_bits(buf_t * buf, int max_items)
-{
-	// build status LED drive signal.
-	// assuming the driving clock is 6.6666...MHz.
-	// At that frequency, one symbol (1bit) of
-	// the WS2812 is represented at 8 bit clocks 
-	// of the I2S bitstream.
-	// And one WS2812 word (24bit) is 8*24=192 bit clocks
-	// of the I2S bitstream.
-	// fortunately, at least at this point, max_items
-	// is always 2048, which is integral multiple of
-	// 8, but unfortunately it is not integral multiple
-	// of 192.
-	// umm... so, we use non-time critical function
-	// commit_status_led( ) to prepare data of the
-	// WS2812 bitstream which is easily transmittable
-	// at interrupt routine to reduce interrupting
-	// time.
-
-	// process 32bit in a status_led_buf item at one loop unit.
-	uint32_t *buf32 = (uint32_t*)buf;
-	int i = slb_i_save;
-	for(int n = 0; i < status_led_buf_sz && n < max_items; ++i, n += 32*8)
-	{
-		uint32_t v = status_led_buf[i];
-#define SYMBOL32_1 \
-						(B_STATUSLED <<  0) +\
-						(B_STATUSLED <<  8) +\
-						(B_STATUSLED << 16) +\
-						(B_STATUSLED << 24) +\
-						0
-#define SYMBOL32_0 \
-						(B_STATUSLED <<  0) +\
-						(B_STATUSLED <<  8) +\
-						0
-#if 0
-		for(uint32_t bit = (1u<<31); bit; bit >>= 1)
-		{
-			buf32[0] = (v & bit) ? SYMBOL32_1 : SYMBOL32_0;
-			buf32 += 2;
-		}
-#else
-
-#define ONE_BIT(N) buf32[(N)*2] |= (v & (1<<(31-(N)))) ? SYMBOL32_1 : SYMBOL32_0;
-
-#define FOUR_BITS(N) \
-		ONE_BIT((N)+0) \
-		ONE_BIT((N)+1) \
-		ONE_BIT((N)+2) \
-		ONE_BIT((N)+3)
-
-		FOUR_BITS(0*4)
-		FOUR_BITS(1*4)
-		FOUR_BITS(2*4)
-		FOUR_BITS(3*4)
-		FOUR_BITS(4*4)
-		FOUR_BITS(5*4)
-		FOUR_BITS(6*4)
-		FOUR_BITS(7*4)
-
-
-		buf32 += 2*32; // one symbol takes 8 bytes (two 32bit word)
-#endif
-	}
-	slb_i_save = i;
-}
 
 
 static void IRAM_ATTR shuffle_bytes(buf_t *buf, int count)
@@ -716,10 +604,6 @@ void IRAM_ATTR build_first_half()
 		// dummy clock
 		*(bufp++)  = 0;
 	}
-
-	// build status led data
-	if(r == 0) { build_status_led_bits_reset(); }
-	build_status_led_bits(buf, 2048);
 
 /*
 	for(int i = 0; i < 2048; ++i)
@@ -775,10 +659,6 @@ void IRAM_ATTR build_second_half()
 	bufp += build_set_led1642_reg_2(bufp, 0xffff); // full LEDs on
 
 	tmpp[0] |= B_ROWLATCH; // let HCT595 latch the buffer
-
-
-	// build status led data
-	build_status_led_bits(buf + 2048, 2048);
 
 /* 
 	for(int i = 2048; i < 4096; ++i)
@@ -846,113 +726,10 @@ void matrix_drive_loop() {
 }
 
 
-
-// drive WS2812 without matrix driver involved
-void drive_status_led_no_matrix()
-{
-	// we use here inverted UART to transmit WS2812 signals.
-	// using 3.333...MHz baud rate and 6bit transmission mode and
-	// output inversion enabled,
-	//  st  0  1  2  3  4  5  sp
-	//   1  x  x  x  x  x  x  0 
-	// above waveform can be transmitted. 
-	// we can use two WS2812 bit in one transmittion unit:
-	// upper nibble and lower nibble.
-	// each nibble can be:
-	// for WS2812's 0 symbol:   0b 1000
-	// for WS2812's 1 symbol:   0b 1100
-
-	// for prepareing the data, do not use commit_status_led();
-	// this function dynamically allocates the buffer it need.
-	// it's important to transmit data without gaps.
-	// if the transmit has a gap by interrupt routine,
-	// suggest invalidating the interrupt while calling this function. 
-
-	// setup uart config
-	uart_config_t uart_config = {
-			.baud_rate = 3333333,
-			.data_bits = UART_DATA_6_BITS,
-			.parity = UART_PARITY_DISABLE,
-			.stop_bits = UART_STOP_BITS_1,
-			.flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
-			.rx_flow_ctrl_thresh = 120,
-			.use_ref_tick = 0,
-	};
-#define SYMBOL_H_LOWER_NIBBLE (0b110<<0)
-#define SYMBOL_L_LOWER_NIBBLE (0b111<<0)
-#define SYMBOL_H_UPPER_NIBBLE (0b100<<3)
-#define SYMBOL_L_UPPER_NIBBLE (0b110<<3)
-	
-	uint8_t *buf_allocated = (uint8_t*)malloc(MAX_STATUS_LED * 24 / 2); 
-	if(!buf_allocated) return; // no memory
-	// prepare tx buffer
-	uint8_t *buf = buf_allocated;
-	for(int i = 0; i < MAX_STATUS_LED; ++i)
-	{
-		uint32_t v = status_led_array[i].value;
-		buf[0] =
-			( v & (1<<23) ? SYMBOL_H_LOWER_NIBBLE : SYMBOL_L_LOWER_NIBBLE ) |
-			( v & (1<<22) ? SYMBOL_H_UPPER_NIBBLE : SYMBOL_L_UPPER_NIBBLE ) ;
-		buf[1] =
-			( v & (1<<21) ? SYMBOL_H_LOWER_NIBBLE : SYMBOL_L_LOWER_NIBBLE ) |
-			( v & (1<<20) ? SYMBOL_H_UPPER_NIBBLE : SYMBOL_L_UPPER_NIBBLE ) ;
-		buf[2] =
-			( v & (1<<19) ? SYMBOL_H_LOWER_NIBBLE : SYMBOL_L_LOWER_NIBBLE ) |
-			( v & (1<<18) ? SYMBOL_H_UPPER_NIBBLE : SYMBOL_L_UPPER_NIBBLE ) ;
-		buf[3] =
-			( v & (1<<17) ? SYMBOL_H_LOWER_NIBBLE : SYMBOL_L_LOWER_NIBBLE ) |
-			( v & (1<<16) ? SYMBOL_H_UPPER_NIBBLE : SYMBOL_L_UPPER_NIBBLE ) ;
-		buf[4] =
-			( v & (1<<15) ? SYMBOL_H_LOWER_NIBBLE : SYMBOL_L_LOWER_NIBBLE ) |
-			( v & (1<<14) ? SYMBOL_H_UPPER_NIBBLE : SYMBOL_L_UPPER_NIBBLE ) ;
-		buf[5] =
-			( v & (1<<13) ? SYMBOL_H_LOWER_NIBBLE : SYMBOL_L_LOWER_NIBBLE ) |
-			( v & (1<<12) ? SYMBOL_H_UPPER_NIBBLE : SYMBOL_L_UPPER_NIBBLE ) ;
-		buf[6] =
-			( v & (1<<11) ? SYMBOL_H_LOWER_NIBBLE : SYMBOL_L_LOWER_NIBBLE ) |
-			( v & (1<<10) ? SYMBOL_H_UPPER_NIBBLE : SYMBOL_L_UPPER_NIBBLE ) ;
-		buf[7] =
-			( v & (1<< 9) ? SYMBOL_H_LOWER_NIBBLE : SYMBOL_L_LOWER_NIBBLE ) |
-			( v & (1<< 8) ? SYMBOL_H_UPPER_NIBBLE : SYMBOL_L_UPPER_NIBBLE ) ;
-		buf[8] =
-			( v & (1<< 7) ? SYMBOL_H_LOWER_NIBBLE : SYMBOL_L_LOWER_NIBBLE ) |
-			( v & (1<< 6) ? SYMBOL_H_UPPER_NIBBLE : SYMBOL_L_UPPER_NIBBLE ) ;
-		buf[9] =
-			( v & (1<< 5) ? SYMBOL_H_LOWER_NIBBLE : SYMBOL_L_LOWER_NIBBLE ) |
-			( v & (1<< 4) ? SYMBOL_H_UPPER_NIBBLE : SYMBOL_L_UPPER_NIBBLE ) ;
-		buf[10] =
-			( v & (1<< 3) ? SYMBOL_H_LOWER_NIBBLE : SYMBOL_L_LOWER_NIBBLE ) |
-			( v & (1<< 2) ? SYMBOL_H_UPPER_NIBBLE : SYMBOL_L_UPPER_NIBBLE ) ;
-		buf[11] =
-			( v & (1<< 1) ? SYMBOL_H_LOWER_NIBBLE : SYMBOL_L_LOWER_NIBBLE ) |
-			( v & (1<< 0) ? SYMBOL_H_UPPER_NIBBLE : SYMBOL_L_UPPER_NIBBLE ) ;
-		buf += 12;
-	}
-
-
-	uart_param_config(UART_NUM_2, &uart_config);
-	uart_set_pin(UART_NUM_2, IO_STATUSLED, UART_PIN_NO_CHANGE,
-		UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
-	REG_SET_BIT(GPIO_FUNC4_OUT_SEL_CFG_REG, GPIO_FUNC4_OUT_INV_SEL); // output invert
-	uart_driver_install(UART_NUM_2, 256, 0, 8, nullptr, 0);
-
-	uart_write_bytes(UART_NUM_2, (const char *)buf_allocated, MAX_STATUS_LED * 24 / 2);
-	uart_wait_tx_done(UART_NUM_2, 600);
-	uart_driver_delete(UART_NUM_2);
-
-	free(buf_allocated);
-}
-
-
-
-
 static void refresh_task(void* arg);
 
 void matrix_drive_early_setup()
 {
-	// blank all status LEDs
-	memset(status_led_array, 0, sizeof(status_led_array));
-	drive_status_led_no_matrix();
 
 	// blank all matrix LEDs
 	led_gpio_init();
@@ -1068,14 +845,6 @@ static void refresh_task(void* arg) {
 	{
 		memcpy(array[y], buffer[y] + 10, 64);
 	}
-
-	for(int i = 0; i < MAX_STATUS_LED; ++i)
-	{
-		status_led_array[i].b = i*30;
-		status_led_array[i].g = i*30+120;
-		status_led_array[i].r = i*30 + 180;
-	}
-	commit_status_led();
 
   }
 }

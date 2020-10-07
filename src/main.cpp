@@ -8,13 +8,16 @@
 #include "mz_console.h"
 #include "threadsync.h"
 #include "calendar.h"
+#include "status_led.h"
 
 void setup() {
   // put your setup code here, to run once:
+  status_led_early_setup();
   matrix_drive_early_setup(); // blank all leds
 
   delay(3000);
 
+  status_led_setup();
   matrix_drive_setup();
   init_fs();
 
@@ -83,4 +86,5 @@ void loop() {
   matrix_drive_loop();
   button_update();
   poll_main_thread_queue();
+  status_led_loop();
 }
