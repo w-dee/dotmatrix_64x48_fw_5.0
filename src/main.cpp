@@ -9,6 +9,9 @@
 #include "threadsync.h"
 #include "calendar.h"
 #include "status_led.h"
+#include "ambient.h"
+#include "mz_i2c.h"
+#include "mz_bme.h"
 
 void setup() {
   // put your setup code here, to run once:
@@ -59,6 +62,8 @@ void setup() {
   init_console();
   wifi_setup();
   init_calendar(); // sntp initialization needs to be located after network stack initialization
+  init_i2c();
+  init_bme280();
 
   // find font partition and mmap into the address space
 	puts("Compressed BFF font initializing ...");
@@ -87,4 +92,6 @@ void loop() {
   button_update();
   poll_main_thread_queue();
   status_led_loop();
+  poll_ambient();
+  poll_bme280();
 }
