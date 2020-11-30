@@ -714,43 +714,42 @@ namespace cmd_keys
                     case 0x5b: // exotic keys
                         ch3 = getchar();
                         ch4 = -1;
-                        if(ch2 == 0x5b)
+                        switch(ch3)
                         {
-                            switch(ch3)
-                            {
-                            case 0x30: // MC/0
-                            case 0x34: // MC/4
-                            case 0x35: // MC/5
-                            case 0x31: // SM78
-                            case 0x32: // SM77
-                            case 0x33: // SM73
-                            //case 0x34: // SM83
-                            //case 0x35: // SM64
-                                ch4 = getchar(); // four character escape seq
-                                (void)ch4;
-                                break;
+                        case 0x30: // MC/0
+                        case 0x34: // MC/4
+                        case 0x35: // MC/5
+                        case 0x31: // SM78
+                        case 0x32: // SM77
+                        case 0x33: // SM73
+                        //case 0x34: // SM83
+                        //case 0x35: // SM64
+                            ch4 = getchar(); // four character escape seq
+                            (void)ch4;
+                            break;
 
-                            case 0x41: // UP
-                                buttons |= BUTTON_UP;
-                                break;
+                        case 0x41: // UP
+                            buttons |= BUTTON_UP;
+                            break;
 
-                            case 0x42: // DOWN
-                                buttons |= BUTTON_DOWN;
-                                break;
+                        case 0x42: // DOWN
+                            buttons |= BUTTON_DOWN;
+                            break;
 
-                            case 0x43: // RIGHT
-                                buttons |= BUTTON_RIGHT;
-                                break;
+                        case 0x43: // RIGHT
+                            buttons |= BUTTON_RIGHT;
+                            break;
 
-                            case 0x44: // LEFT
-                                buttons |= BUTTON_LEFT;
-                                break;
+                        case 0x44: // LEFT
+                            buttons |= BUTTON_LEFT;
+                            break;
 
-                            default:;
-                            }
+                        default:;
                         }
+                        break;
                     
-                    default:;
+                    default:
+                        return 0; // unknown escape sequence byte followed immediately by ESC
                     }
                     break;
 
