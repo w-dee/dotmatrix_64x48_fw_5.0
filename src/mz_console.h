@@ -68,3 +68,7 @@ void init_console();
  * */
 void begin_console();
 
+/**
+ * indicates whether the current input mode is dumb terminal mode(true) or rich terminal mode(false)
+ * */
+extern bool dumb_mode;

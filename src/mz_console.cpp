@@ -12,7 +12,7 @@
 #include "threadsync.h"
 
 static const char * const history_file_name = "/settings/.history";
-static bool dumb_mode = true;
+bool dumb_mode = true;
 
 #define DUMB_PROMPT  "MZ5> "
 #define ANSI_PROMPT  "\x1b[32m" "MZ5> " "\x1b[39m"

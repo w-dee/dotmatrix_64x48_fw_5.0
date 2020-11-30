@@ -13,6 +13,7 @@ void init_bme280()
 
 void poll_bme280()
 {
+    /*
     EVERY_MS(5000)
     {
         double temp = 0, hum = 0, press = 0;
@@ -20,4 +21,5 @@ void poll_bme280()
         printf("temp:%f, hum:%f, pressure:%f\n", temp, hum, press);
     }
     END_EVERY_MS
+    */
 }

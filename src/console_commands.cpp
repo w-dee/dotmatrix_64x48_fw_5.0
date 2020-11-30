@@ -9,11 +9,12 @@
 #include "settings.h"
 #include "calendar.h"
 #include "ir_rmt.h"
+#include "buttons.h"
 
 
 // wait for maximum 20ms, checking key type, returning
-// whether any key has pressed
-static bool any_key_pressed()
+// whether any key has pressed(-1 = no keys pressed)
+static int any_key_pressed()
 {
     // check STDIN has anything to consume
     // say thanks to ESP32 IDF which successfully implemented
@@ -27,10 +28,9 @@ static bool any_key_pressed()
     if (select(1, &readfds, NULL, NULL, &timeout))
     {
         // yes, something is there
-        (void) getchar(); // eat it and discard
-        return true;
+        return getchar(); // eat it and return
     }
-    return false;
+    return -1;
 }
 
 
@@ -364,7 +364,7 @@ namespace cmd_wifi_wps
                 return (int) wifi_get_wps_status();
             })) == SYSTEM_EVENT_WIFI_READY)
             {
-                if(any_key_pressed())
+                if(any_key_pressed() != -1)
                 {
                     printf("Stopping WPS.\n");
                     run_in_main_thread([] () -> int { wifi_stop_wps(); return 0; });
@@ -520,7 +520,7 @@ namespace cmd_rmt
                     });
                 while(true)
                 {
-                    if(any_key_pressed()) break;
+                    if(any_key_pressed() != -1) break;
                     if(!run_in_main_thread([] () -> int { return rmt_in_progress(); })) break;
                 }
                 rmt_result_t result = (rmt_result_t)run_in_main_thread([] () -> int {
@@ -555,7 +555,7 @@ namespace cmd_rmt
                 printf("Press any key to stop.\n");
                 while(true)
                 {
-                    if(any_key_pressed())
+                    if(any_key_pressed() != -1)
                     {
                         // stop receiving when any key is pressed
                         run_in_main_thread([] () -> int {
@@ -646,6 +646,171 @@ namespace cmd_reboot
 
 
 
+namespace cmd_keys
+{
+    struct arg_lit *help;
+    struct arg_end *end;
+    void * argtable[] = {
+            help =    arg_litn(nullptr, "help", 0, 1, "Display help and exit"),
+            end =     arg_end(5)
+            };
+
+    class _cmd : public cmd_base_t
+    {
+
+    public:
+        _cmd() : cmd_base_t("keys", "Emulate physical button by terminal input", argtable) {}
+
+    private:
+
+        int func(int argc, char **argv)
+        {
+            printf("Key emulation:\n"
+                "  W/K/UP      :  Up\n"
+                "  A/H/LEFT    :  Left\n"
+                "  D/L/RIGHT   :  Right\n"
+                "  S/J/DOWN    :  Down\n");
+            if(dumb_mode)
+                printf("  SPACE       :  OK\n");
+            else
+                printf("  ENTER/SPACE :  OK\n");
+            
+            printf(""
+                "  B/Z         :  CANCEL\n"
+                "  Q/ESC       :  Quit this mode\n"
+            );
+            for(;;)
+            {
+                int ch = getchar();
+                int ch2, ch3, ch4;
+                uint32_t buttons = 0;
+                switch(ch)
+                {
+                case 0x03: // ctrl + c
+                    return 0; // quit
+
+                case '\x1b': // escape
+                    // wait for 200ms maximum and receive escaped
+                    // characters
+                    ch2 = -1;
+                    for(int i = 0; i < 10; ++i)
+                    {
+                        ch2 = any_key_pressed(); // wait for 20ms
+                        if(ch2 != -1) break;
+                    }
+                    if(ch2 == -1) return 0; // timed out; it was ESC key
+                    switch(ch2)
+                    {
+                    case 0x20: // S7C/S8C
+                    case 0x23: // DHL/SWL/DWL/ALN
+                    case 0x28: // SCS-0
+                    case 0x29: // SCS-1
+                    case 0x2a: // SCS-2
+                    case 0x2b: // SCS-3
+                    case 0x2d: // SCS-1A
+                    case 0x2e: // SCS-2A
+                    case 0x2f: // SCS-3A
+                    case 0x4f: // App keypads
+                    case 0x5b: // exotic keys
+                        ch3 = getchar();
+                        ch4 = -1;
+                        if(ch2 == 0x5b)
+                        {
+                            switch(ch3)
+                            {
+                            case 0x30: // MC/0
+                            case 0x34: // MC/4
+                            case 0x35: // MC/5
+                            case 0x31: // SM78
+                            case 0x32: // SM77
+                            case 0x33: // SM73
+                            //case 0x34: // SM83
+                            //case 0x35: // SM64
+                                ch4 = getchar(); // four character escape seq
+                                (void)ch4;
+                                break;
+
+                            case 0x41: // UP
+                                buttons |= BUTTON_UP;
+                                break;
+
+                            case 0x42: // DOWN
+                                buttons |= BUTTON_DOWN;
+                                break;
+
+                            case 0x43: // RIGHT
+                                buttons |= BUTTON_RIGHT;
+                                break;
+
+                            case 0x44: // LEFT
+                                buttons |= BUTTON_LEFT;
+                                break;
+
+                            default:;
+                            }
+                        }
+                    
+                    default:;
+                    }
+                    break;
+
+                case 'Q': case 'q': return 0; // quit
+                    return 0; // quit
+
+                case 'W': case 'w': 
+                case 'K': case 'k':
+                    buttons |= BUTTON_UP;
+                    break;
+
+                case 'A': case 'a': 
+                case 'H': case 'h':
+                    buttons |= BUTTON_LEFT;
+                    break;
+
+                case 'D': case 'd': 
+                case 'L': case 'l':
+                    buttons |= BUTTON_RIGHT;
+                    break;
+
+                case 'S': case 's': 
+                case 'J': case 'j':
+                    buttons |= BUTTON_DOWN;
+                    break;
+
+                case ' ': case 0x0a:
+                    if(dumb_mode)
+                    {
+                        // in dumb mode, enter key may required
+                        // to push input buffer into the serial
+                        if(ch == ' ') buttons |= BUTTON_OK;
+                    }
+                    else
+                    {
+                        buttons |= BUTTON_OK;
+                    }
+                    
+                    break;
+
+                case 'B': case 'b': 
+                case 'Z': case 'z': 
+                    buttons |= BUTTON_CANCEL;
+                    break;
+
+                default:
+                    break;
+                }
+                run_in_main_thread([buttons] () -> int {
+                    button_push(buttons);
+                    return 0;
+                });
+
+            }
+            return 0;
+        }
+    };
+}
+
+
 namespace cmd_t
 {
     struct arg_lit *help = arg_litn(NULL, "help", 0, 1, "Display help and exit");
@@ -684,5 +849,6 @@ void init_console_commands()
     static cmd_ntp::_cmd ntp_cmd;
     static cmd_rmt::_cmd rmt_cmd;
     static cmd_reboot::_cmd reboot_cmd;
+    static cmd_keys::_cmd keys_cmd;
     static cmd_t::_cmd t_cmd;
 }
