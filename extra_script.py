@@ -4,7 +4,7 @@ Import("env")
 def uploadfont(*args, **kwargs):
     # note: keep that this font start address and the address written in custom.csv are in sync.
     # TODO: take the address automatically from the csv file
-    env.Replace(FONT_ADDRESS="0x290000", FONT_FILE_NAME="src/fonts/takaop.bff")
+    env.Replace(FONT_ADDRESS="0x3c0000", FONT_FILE_NAME="src/fonts/takaop.bff")
     env.AutodetectUploadPort()
     env.Replace(
         UPLOADERFLAGS=[

@@ -1,12 +1,12 @@
 # Name,   Type, SubType, Offset,  Size, Flags
 nvs,      data, nvs,     0x9000,    0x5000,
 otadata,  data, ota,     0xe000,    0x2000,
-app0,     app,  ota_0,   0x10000, 0x110000,
-app1,     app,  ota_1,   0x120000,0x110000,
-spiffs,   data, spiffs,  0x230000, 0x50000,
-conf,     data, spiffs,  0x280000, 0x10000,
-font,     0x40, 0,       0x290000,0x170000,
+app0,     app,  ota_0,   0x10000, 0x150000,
+app1,     app,  ota_1,   0x160000,0x150000,
+spiffs,   data, spiffs,  0x2b0000,0x100000,
+conf,     data, spiffs,  0x3b0000, 0x10000,
+font0,    0x40, 0,       0x3c0000,0x170000,
+font1,    0x40, 1,       0x530000,0x170000,
+
 # note: keep that font start address written in extra_script.py, and the address written above, are in sync.
 # TODO: take the address automatically from the csv file
-# TODO: expand conf space to 500kB. RMT data is stored in conf space,
-# TODO: which is too small to store.
