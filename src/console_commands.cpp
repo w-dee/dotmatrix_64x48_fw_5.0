@@ -699,6 +699,7 @@ namespace cmd_keys
                         if(ch2 != -1) break;
                     }
                     if(ch2 == -1) return 0; // timed out; it was ESC key
+                    if(ch2 == 0x1b) return 0; // ESC ESC is also ESC key
                     switch(ch2)
                     {
                     case 0x20: // S7C/S8C
