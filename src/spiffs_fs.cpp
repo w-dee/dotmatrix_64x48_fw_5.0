@@ -25,6 +25,7 @@ extern "C" {
 }
 
 #include "spiffs_fs.h"
+#include "update.h"
 
 using namespace fs;
 
@@ -115,6 +116,7 @@ ANY_SPIFFSFS FS; // global instance
 void init_fs()
 {
    	puts("Main SPIFFS initializing ...");
-    ::FS.begin(true, nullptr);
+    ::FS.begin(true, (get_current_active_partition_number()==1) ? "spiffs1" : "spiffs");
+    // see custom.csv for the partition label.
 }
 

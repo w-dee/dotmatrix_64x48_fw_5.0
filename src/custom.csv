@@ -4,9 +4,12 @@ otadata,  data, ota,     0xe000,    0x2000,
 app0,     app,  ota_0,   0x10000, 0x150000,
 app1,     app,  ota_1,   0x160000,0x150000,
 spiffs,   data, spiffs,  0x2b0000,0x100000,
-conf,     data, spiffs,  0x3b0000, 0x10000,
-font0,    0x40, 0,       0x3c0000,0x170000,
-font1,    0x40, 1,       0x530000,0x170000,
+spiffs1,  data, spiffs,  0x3b0000,0x100000,
+conf,     data, spiffs,  0x4b0000, 0x10000,
+font0,    0x40, 0,       0x4c0000,0x170000,
+font1,    0x40, 1,       0x630000,0x170000,
 
 # note: keep that font start address written in extra_script.py, and the address written above, are in sync.
+# note: spiffs is not labeled as spiffs0. this is due to the existing
+#       PlatformIO uploader only recognizes the primary partition label as spiffs.
 # TODO: take the address automatically from the csv file
