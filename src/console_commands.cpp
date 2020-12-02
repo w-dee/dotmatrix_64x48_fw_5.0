@@ -111,7 +111,7 @@ namespace cmd_wifi_ip
     {
 
     public:
-        _cmd() : cmd_base_t("wifi-ip", "Set DCHP mode or IP addresses manually", argtable) {}
+        _cmd() : cmd_base_t("wifi-ip", "Set DHCP mode or IP addresses manually", argtable) {}
 
     private:
         static void set_dns(ip_addr_settings_t &settings)
