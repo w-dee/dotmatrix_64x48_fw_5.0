@@ -85,4 +85,5 @@ private:
 
 public:
     void write_data(const uint8_t * buf, size_t size); // write a block
+    bool finish(); // call this when all data is sent via write_data(); returns whether the update is succeeded or not
 };

@@ -224,6 +224,7 @@ void updater_t::process_block()
 void updater_t::write_data(const uint8_t * buf, size_t size)
 {
     if(status != stNoError) return;
+    if(!buffer) return;
     while(size > 0)
     {
         // fill buffer
@@ -241,4 +242,16 @@ void updater_t::write_data(const uint8_t * buf, size_t size)
             if(status != stNoError) return;
         }
     }
+}
+
+bool updater_t::finish()
+{
+    bool success = false;
+    if(status != stNoError) goto fin;
+    if(phase != phHeader) goto fin; // phase mismatch
+
+    success = true; // no error found
+fin:
+    if(buffer) free(buffer), buffer = nullptr;
+    return success;
 }
