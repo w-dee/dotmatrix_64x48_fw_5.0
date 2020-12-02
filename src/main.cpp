@@ -12,6 +12,7 @@
 #include "ambient.h"
 #include "mz_i2c.h"
 #include "mz_bme.h"
+#include "web_server.h"
 
 void setup() {
   // put your setup code here, to run once:
@@ -88,9 +89,9 @@ void setup() {
   printf("%p\r\n", ptr);
   printf("Font data magic: %02x %02x %02x %02x\r\n", ptr[0], ptr[1], ptr[2], ptr[3]);
 
-
-
   begin_console();
+
+  web_server_setup();
 }
 
 void loop() {
@@ -101,4 +102,5 @@ void loop() {
   status_led_loop();
   poll_ambient();
   poll_bme280();
+  web_server_handle_client();
 }
