@@ -25,7 +25,7 @@ extern "C" {
 }
 
 #include "spiffs_fs.h"
-#include "update.h"
+#include "mz_update.h"
 
 using namespace fs;
 

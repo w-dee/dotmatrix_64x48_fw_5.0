@@ -2,7 +2,7 @@
 #include "matrix_drive.h"
 #include "spiffs_fs.h"
 #include "settings.h"
-#include "update.h"
+#include "mz_update.h"
 #include "mz_wifi.h"
 #include "buttons.h"
 #include "mz_console.h"
@@ -19,8 +19,10 @@ void setup() {
   status_led_early_setup();
   matrix_drive_early_setup(); // blank all leds
 
-  delay(3000);
+  delay(1000);
 
+  init_console(); // this also initializes the serial output and stdio
+  show_ota_status();
   status_led_setup();
   matrix_drive_setup();
   init_fs();
@@ -60,7 +62,6 @@ void setup() {
 
 
   init_settings();
-  init_console();
   wifi_setup();
   init_calendar(); // sntp initialization needs to be located after network stack initialization
   init_i2c();

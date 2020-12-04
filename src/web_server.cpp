@@ -1,4 +1,5 @@
 #include <WebServer.h>
+#include "mz_update.h"
 
 
 static WebServer server(80);
@@ -94,24 +95,25 @@ void web_server_setup()
 	  }, []() {
 		HTTPUpload& upload = server.upload();
 		if (upload.status == UPLOAD_FILE_START) {
-		  printf("Update: %s\n", upload.filename.c_str());
-//		  if (!Update.begin(UPDATE_SIZE_UNKNOWN)) { //start with max available size
-//		    Update.printError(Serial);
-//		  }
+			printf("Update: %s\n", upload.filename.c_str());
+
+			Updater.begin();
+
 		} else if (upload.status == UPLOAD_FILE_WRITE) {
-		  /* flashing firmware to ESP*/
-//		  if (Update.write(upload.buf, upload.currentSize) != upload.currentSize) {
-//		    Update.printError(Serial);
-//		  }
+
+			Updater.write_data(upload.buf, upload.currentSize);
+
 		} else if (upload.status == UPLOAD_FILE_END) {
-//		  if (Update.end(true)) { //true to set the size to the current progress
-//		    Serial.printf("Update Success: %u\nRebooting...\n", upload.totalSize);
-//		  } else {
-//		    Update.printError(Serial);
-//		  }
+
+			if(Updater.finish())
+			{
+				reboot(); // reboot 
+			}
+
 		}
 	  });
 
+	server.onNotFound(handleNotFound);
 
 	server.begin();
 	puts("HTTP server started");

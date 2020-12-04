@@ -10,6 +10,7 @@
 #include "calendar.h"
 #include "ir_rmt.h"
 #include "buttons.h"
+#include "mz_update.h"
 
 
 // wait for maximum 20ms, checking key type, returning
@@ -623,21 +624,7 @@ namespace cmd_reboot
         int func(int argc, char **argv)
         {
             return run_in_main_thread([] () -> int {
-                if(hard->count)
-                {
-                    // put all settings clear inidication file
-                    FILE * f = fopen(CLEAR_SETTINGS_INDICATOR_FILE, "w");
-                    if(f) fclose(f);
-                }
-                // ummm...
-                // As far as I know, spiffs is always-consistent,
-                // so at any point, rebooting the hardware may not corrupt
-                // the filesystem. Obviously FAT is not. Take care if
-                // using micro SD cards.
-                printf("Rebooting ...\n");
-                delay(1000);
-                ESP.restart();
-                for(;;) /**/ ;
+                reboot(hard->count);
                 return 0; // must be non-reachable
             }) ;       
          }

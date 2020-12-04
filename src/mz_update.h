@@ -87,3 +87,20 @@ public:
     void write_data(const uint8_t * buf, size_t size); // write a block
     bool finish(); // call this when all data is sent via write_data(); returns whether the update is succeeded or not
 };
+
+/**
+ * updater global instance
+ * */
+extern updater_t Updater;
+
+
+/**
+ * Show current OTA status
+ * */
+void show_ota_status();
+
+/**
+ * Reboot and optionally clear settings
+ * */
+void reboot(bool clear_settings = false);
+

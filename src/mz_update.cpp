@@ -1,5 +1,5 @@
-#include "update.h"
-
+#include "mz_update.h"
+#include "settings.h"
 
 
 
@@ -153,30 +153,44 @@ void updater_t::process_block()
     if(phase == phBegin)
     {
         // received block must be a header
+        printf("OTA: Receiving archive header ...\n");
         if(memcmp("MZ5 firmware archive 1.0\r\n\n\x1a    ", buffer, 32))
         {
             // invalid header
+            printf("OTA: Error: invalid archive header.\n");
             status = stCorrupted;
             return; 
         }
+        printf("OTA: valid archive header.\n");
         phase = phHeader;
     }
     else if(phase == phHeader)
     {
         // received block must be a partition header
+        printf("OTA: Receiving partition header ...\n");
         if(memcmp(buffer, "-file boundary--", 16))
         {
             // partition header mismatch
+            printf("OTA: Error: invalid partition header.\n");
             status = stCorrupted;
             return;
         }
         memcpy(&header, buffer + 16, sizeof(header)); // take a copy of it
         header.label[sizeof(header.label)-1 ] = 0; // force terminate the label string
 
+        // print information
+        printf("OTA: Partition label: %s, Original size: %d, Archived size: %d\n",
+            header.label, (int)header.orig_len, (int)header.orig_len);
+        printf("OTA:            MD5 sum: ");
+        for(int i = 0; i < sizeof(header.md5); ++i)
+            printf("%02x", header.md5[i]);
+        printf("\n");
+
         // some sanity checks
         if(header.orig_len > header.arc_len ||
             header.arc_len % SPI_FLASH_SEC_SIZE != 0)
         {
+            printf("OTA: Error: Invalid partition size.\n");
             status = stCorrupted;
             return;
         }
@@ -192,12 +206,14 @@ void updater_t::process_block()
         else
         {
             // unknown label
-            status = stCorrupted;
+            printf("OTA: Error: Unknown label.\n");
+           status = stCorrupted;
             return;
         }
         partition_updater.begin(type, header.arc_len);
 
         remaining_count = header.arc_len / SPI_FLASH_SEC_SIZE;
+        printf("OTA: Sector count: %d\n", (int)remaining_count);
     }
     else if(phase == phContent)
     {
@@ -206,9 +222,11 @@ void updater_t::process_block()
         if(remaining_count == 0)
         {
             // all sector in the partition has been written
+            printf("OTA: All sectors written.\n");
             if(!partition_updater.match_md5(header.md5))
             {
                 // md5 mismatch
+                printf("OTA: Error: MD5 mismatch.\n");
                 status = stCorrupted;
                 return;
             }
@@ -248,10 +266,47 @@ bool updater_t::finish()
 {
     bool success = false;
     if(status != stNoError) goto fin;
-    if(phase != phHeader) goto fin; // phase mismatch
+    if(phase != phHeader)
+    {
+        printf("OTA: Error: Premature end of input.\n");
+        goto fin; // phase mismatch
+    }
+
+    printf("OTA: Success.\n");
 
     success = true; // no error found
 fin:
     if(buffer) free(buffer), buffer = nullptr;
     return success;
+}
+
+updater_t Updater;
+
+void show_ota_status()
+{
+    int part = get_current_active_partition_number();
+    printf("Booting from the OTA partition : %s\n",
+        (part == 0) ? "app0" :
+        (part == 1) ? "app1" : "unknown");
+}
+
+
+void reboot(bool clear_settings)
+{
+    if(clear_settings)
+    {
+        // put all settings clear inidication file
+        FILE * f = fopen(CLEAR_SETTINGS_INDICATOR_FILE, "w");
+        if(f) fclose(f);
+    }
+    // ummm...
+    // As far as I know, spiffs is always-consistent,
+    // so at any point, rebooting the hardware may not corrupt
+    // the filesystem. Obviously FAT is not. Take care if
+    // using micro SD cards.
+    printf("Rebooting ...\n");
+    delay(1000);
+    ESP.restart();
+    for(;;) /**/ ;
+    return; // must be non-reachable
 }
