@@ -6,20 +6,26 @@
 bool partition_updater_t::begin(update_type_t type, uint32_t size)
 {
     _type = type;
-    _size = _size;
+    _size = size;
+    _progress = 0;
     if(_size & (SPI_FLASH_SEC_SIZE - 1)) return false; // the size is not a multiple of SPI_FLASH_SEC_SIZE
     _partition = next_partition_from_type(_type);
     if(!_partition) return false; // partition not found
+    if(_partition->size < _size) return false; // too large 
     _md5.begin();
     return true;
 }
 
 bool partition_updater_t::write_sector(const uint8_t *buf)
 {
-    if(_type == utUnknown) return false; // not begun
-    if(_progress >= _partition->size) return false; // already done
+    if(_type == utUnknown) { printf("not begin\n"); return false; } // not begun
+    if(_progress >= _size) { printf("already done %d %d\n", _progress, _size); return false; } // already done
     uint8_t *bbuf = (uint8_t*)malloc(SPI_FLASH_SEC_SIZE);
-    if(!bbuf) return false; // memory exhausted
+    if(!bbuf)
+    {
+        printf("OTA: Error: Memory exhausted.\n");
+        return false; // memory exhausted
+    }
 
     memcpy(bbuf, buf, SPI_FLASH_SEC_SIZE);
 
@@ -33,9 +39,11 @@ bool partition_updater_t::write_sector(const uint8_t *buf)
     }
 
     if(!ESP.flashEraseSector((_partition->address + _progress)/SPI_FLASH_SEC_SIZE)){
+        printf("OTA: Error: Failed to erase a sector at %08lx.\n", (long)(_partition->address + _progress));
         goto fail;
     }
     if (!ESP.flashWrite(_partition->address + _progress, (uint32_t*)bbuf, SPI_FLASH_SEC_SIZE)) {
+        printf("OTA: Error: Failed to write a sector at %08lx.\n", (long)(_partition->address + _progress));
         goto fail;
     }
 
@@ -49,7 +57,7 @@ bool partition_updater_t::write_sector(const uint8_t *buf)
     _md5.add(bbuf, (uint16_t)SPI_FLASH_SEC_SIZE); //  !?!?!? why the first argument is not const 
 
     _progress += SPI_FLASH_SEC_SIZE;
-    if(_progress >= _partition->size)
+    if(_progress >= _size)
     {
         // finished
 
@@ -58,11 +66,13 @@ bool partition_updater_t::write_sector(const uint8_t *buf)
         uint8_t buf[4];
 
         if(!ESP.flashRead(_partition->address, (uint32_t*)buf, 4)) {
+            printf("OTA: Error: Failed to read a sector from %08lx.\n", (long)(_partition->address));
             goto fail;
         }
         buf[0] = _first_byte;
 
         if(!ESP.flashWrite(_partition->address, (uint32_t*)buf, 4)) {
+            printf("OTA: Error: Failed to write a sector at %08lx.\n", (long)(_partition->address));
             goto fail;
         }
     }
@@ -79,18 +89,21 @@ fail:
 bool partition_updater_t::match_md5(const uint8_t *md5)
 {
     if(_type == utUnknown) return false; // not begun
-    if(_progress != _partition->size) return false; // incomplete
+    if(_progress != _size) return false; // incomplete
 
     // _md5.calculate() was done in write_sector()
     uint8_t buf[16];
     _md5.getBytes(buf);
+    printf("OTA: Received MD5: ");
+    for(int i = 0; i < sizeof(buf); ++i) printf("%02x", buf[i]);
+    printf("\n");
     return !memcmp(md5, buf, sizeof(buf));
 }
 
 bool partition_updater_t::activate_new_code()
 {
     if(_type != utCode) return false;
-     if(_progress != _partition->size) return false; // incomplete
+     if(_progress != _size) return false; // incomplete
     if(esp_ota_set_boot_partition(_partition) != ESP_OK) return false;
     return true;
 }
@@ -161,7 +174,7 @@ void updater_t::process_block()
             status = stCorrupted;
             return; 
         }
-        printf("OTA: valid archive header.\n");
+        printf("OTA: Valid archive header.\n");
         phase = phHeader;
     }
     else if(phase == phHeader)
@@ -179,8 +192,8 @@ void updater_t::process_block()
         header.label[sizeof(header.label)-1 ] = 0; // force terminate the label string
 
         // print information
-        printf("OTA: Partition label: %s, Original size: %d, Archived size: %d\n",
-            header.label, (int)header.orig_len, (int)header.orig_len);
+        printf("OTA: Partition label: '%s', Original size: %d, Archived size: %d\n",
+            header.label, (int)header.orig_len, (int)header.arc_len);
         printf("OTA:            MD5 sum: ");
         for(int i = 0; i < sizeof(header.md5); ++i)
             printf("%02x", header.md5[i]);
@@ -207,22 +220,35 @@ void updater_t::process_block()
         {
             // unknown label
             printf("OTA: Error: Unknown label.\n");
-           status = stCorrupted;
+            status = stCorrupted;
             return;
         }
-        partition_updater.begin(type, header.arc_len);
+
+        if(!partition_updater.begin(type, header.arc_len))
+        {
+            printf("OTA: Error: Possibly too large image to fit.\n");
+            status = stCorrupted;
+            return;
+        }
 
         remaining_count = header.arc_len / SPI_FLASH_SEC_SIZE;
         printf("OTA: Sector count: %d\n", (int)remaining_count);
+        phase = phContent;
     }
     else if(phase == phContent)
     {
-        partition_updater.write_sector(buffer);
+        printf(".");
+        if(!partition_updater.write_sector(buffer))
+        {
+            printf("\nOTA: Error: Failed at partition_updater.write_sector().\n");
+            status = stCorrupted;
+            return;
+        }
         -- remaining_count;
         if(remaining_count == 0)
         {
             // all sector in the partition has been written
-            printf("OTA: All sectors written.\n");
+            printf("\nOTA: All sectors written.\n");
             if(!partition_updater.match_md5(header.md5))
             {
                 // md5 mismatch

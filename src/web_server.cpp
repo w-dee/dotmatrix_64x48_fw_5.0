@@ -6,7 +6,7 @@ static WebServer server(80);
 
 
  
-static String updateIndex = 
+static String updateIndex = // TODO: Error handling
 "<script src='https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js'></script>"
 "<form method='POST' action='#' enctype='multipart/form-data' id='upload_form'>"
    "<input type='file' name='update'>"
@@ -91,7 +91,8 @@ void web_server_setup()
 	server.on("/update", HTTP_POST, []() {
 		server.sendHeader("Connection", "close");
 		server.send(200, "text/plain", /*(Update.hasError()) ? "FAIL" : */"OK");
-		ESP.restart();
+		// TODO: error handling
+
 	  }, []() {
 		HTTPUpload& upload = server.upload();
 		if (upload.status == UPLOAD_FILE_START) {
