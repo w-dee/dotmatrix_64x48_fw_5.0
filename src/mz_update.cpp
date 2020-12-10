@@ -119,7 +119,7 @@ const esp_partition_t* partition_updater_t::next_partition_from_type(update_type
             (active == 1) ? ESP_PARTITION_SUBTYPE_APP_OTA_0 : ESP_PARTITION_SUBTYPE_APP_OTA_1, nullptr);
     case utSPIFFS:
         return esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_SPIFFS,
-            (active == 1) ? "spiffs" : "spiffs1"); // see custom.csv
+            (active == 1) ? "spiffs0" : "spiffs1");
     case utFont:
         return esp_partition_find_first((esp_partition_type_t)0x40,
             (esp_partition_subtype_t)((active == 1) ? 0 : 1), nullptr); // see custom.csv for partition table
