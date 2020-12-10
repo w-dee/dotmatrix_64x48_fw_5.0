@@ -1,4 +1,6 @@
 #include <WebServer.h>
+#include <StreamString.h>
+#include "spiffs_fs.h"
 #include "mz_update.h"
 
 
@@ -43,11 +45,64 @@ static String updateIndex = // TODO: Error handling
  "});"
  "</script>";
 
+static bool send_common_header()
+{
+	/*
+	if(!in_recovery)
+	{
+		if(!server.authenticate(user_name, password.c_str()))
+		{
+			server.requestAuthentication();
+			return false;
+		}
+	}
+	return true;
+	*/
+	return true;
+}
+
+static bool loadFromFS(String path){
+	String dataType = F("text/plain");
+	if(path.endsWith("/")) path += F("index.html");
+
+	if(path.endsWith(".htm") || path.endsWith(".html")) dataType = F("text/html");
+	else if(path.endsWith(".css")) dataType = F("text/css");
+	else if(path.endsWith(".js"))  dataType = F("application/javascript");
+	else if(path.endsWith(".png")) dataType = F("image/png");
+	else if(path.endsWith(".gif")) dataType = F("image/gif");
+	else if(path.endsWith(".jpg")) dataType = F("image/jpeg");
+	else if(path.endsWith(".ico")) dataType = F("image/x-icon");
+	else if(path.endsWith(".xml")) dataType = F("text/xml");
+	else if(path.endsWith(".pdf")) dataType = F("application/pdf");
+	else if(path.endsWith(".zip")) dataType = F("application/zip");
+	else if(path.endsWith(".txt")) dataType = F("text/plain");
+
+	path = String(F("/w")) + path; // all contents must be under "w" directory
+		// TODO: path reverse-traversal check
+
+	if(FS.exists(path + F(".gz")))
+      path += String(F(".gz")); // handle gz
+
+	if (!FS.exists(path))
+	{
+		printf("Requested load form '%s' but file does not exist.\n", path.c_str());
+		return false;
+	}
+
+	File dataFile = FS.open(path.c_str(), "r");
+
+
+	server.streamFile(dataFile, dataType);
+
+	dataFile.close();
+	return true;
+}
 
 
 static void handleNotFound()
 {
-//	if(loadFromFS(server.uri())) return;
+	if(!send_common_header()) return;
+	if(loadFromFS(server.uri())) return;
 	String message = F("Not Found\n\n");
 	message += String(F("URI: "));
 	message += server.uri();
@@ -64,24 +119,99 @@ static void handleNotFound()
 
 }
 
+static void string_json(const String &s, Stream & st)
+{
+	st.print((char)'"'); // starting "
+	const char *p = s.c_str();
+	while(*p)
+	{
+		char c = *p;
+
+		if(c < 0x20)
+			st.printf_P(PSTR("\\u%04d"), (int)c); // control characters
+		else if(c == '\\')
+			st.print(F("\\\\"));
+		else if(c == '"')
+			st.print(F("\\\""));
+		else
+			st.print(c); // other characters
+
+		++p;
+	}
+	st.print((char)'"'); // ending "
+}
+
+static void web_server_export_json_for_ui(bool js)
+{
+	StreamString st;
+	if(js) st.print(F("window.settings="));
+	st.print(F("{\"result\":\"ok\",\"values\":{\n"));
+/*
+	string_vector v;
+
+	v = calendar_get_ntp_server();
+	st.print(F("\"cal_ntp_servers\":[\n"));
+	string_json(v[0], st); st.print((char)',');
+	string_json(v[1], st); st.print((char)',');
+	string_json(v[2], st); st.print((char)']');
+
+	st.print(F(",\n"));
+	st.print(F("\"cal_timezone\":"));
+	st.printf_P(PSTR("%d"), calendar_get_timezone());
+
+	st.print(F(",\n"));
+	st.print(F("\"admin_pass\":"));
+	string_json(password, st);
+
+	st.print(F(",\n"));
+	st.print(F("\"ui_marquee\":"));
+	string_json(ui_get_marquee(), st);
+
+	st.print(F(",\n"));
+	st.print(F("\"version_info\":{"));
+
+	st.print(F("\"date\":"));
+	string_json(_BuildInfo.date, st);
+	st.print(F(",\n"));
+
+	st.print(F("\"time\":"));
+	string_json(_BuildInfo.time, st);
+	st.print(F(",\n"));
+
+	st.print(F("\"src_version\":"));
+	string_json(_BuildInfo.src_version, st);
+	st.print(F(",\n"));
+
+	st.print(F("\"env_version\":"));
+	string_json(_BuildInfo.env_version, st);
+
+	st.print(F("}\n"));
+
+*/
+	st.print(F("}}\n"));
+	if(js) st.print((char)';');
+
+	if(js)
+		server.send(200, F("application/javascript"), st);
+	else
+		server.send(200, F("application/json"), st);
+}
+
 void web_server_setup()
 {
 	// setup handlers
 
-	server.on(F("/"), HTTP_GET, []() {
-			String html = R"HTMLTEXT(
+	// TODO: recovery mode
+	server.onNotFound(handleNotFound);
 
-			<html><body>
-			<h1>MZ5</h1>
-
-
-			</body></html>
-
-			)HTMLTEXT";
-
-			server.send(200,  F("text/html"), html		);
-	});
-
+	server.on(F("/settings/settings.json"), HTTP_GET, []() {
+			if(!send_common_header()) return;
+			web_server_export_json_for_ui(false);
+		});
+	server.on(F("/settings/settings.js"), HTTP_GET, []() {
+			if(!send_common_header()) return;
+			web_server_export_json_for_ui(true);
+		});
 
 	server.on("/update", HTTP_GET, []() {
 		server.sendHeader("Connection", "close");
