@@ -116,7 +116,7 @@ ANY_SPIFFSFS FS; // global instance
 void init_fs()
 {
    	puts("Main SPIFFS initializing ...");
-    ::FS.begin(true, (get_current_active_partition_number()==1) ? "spiffs1" : "spiffs");
+    ::FS.begin(true, (get_current_active_partition_number()==1) ? "spiffs1" : "spiffs0");
     // see custom.csv for the partition label.
 }
 
