@@ -90,9 +90,9 @@ void setup() {
   printf("%p\r\n", ptr);
   printf("Font data magic: %02x %02x %02x %02x\r\n", ptr[0], ptr[1], ptr[2], ptr[3]);
 
-  begin_console();
-
   web_server_setup();
+
+  begin_console();
 }
 
 void loop() {
