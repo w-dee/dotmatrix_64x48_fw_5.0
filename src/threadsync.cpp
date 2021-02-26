@@ -3,6 +3,7 @@
 #include <threadsync.h>
 #include <deque>
 
+// TODO: use FreeRTOS's native queue object
 static portMUX_TYPE queue_lock = portMUX_INITIALIZER_UNLOCKED;
 struct handler_queue_item_t;
 static std::deque<handler_queue_item_t *> queue;
