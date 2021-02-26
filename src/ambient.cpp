@@ -144,50 +144,64 @@ struct ambient_conn_state_t
 
 // static store of sampled binarized conn_info 
 static ambient_conn_state_t state;
-#endif
 
+#endif
 // read raw ambient value
 static uint16_t read_ambient()
 {
     return analogRead(ADC_NUM);
 }
-
+#if 0
 
 
 
 
 
 static int32_t average = 0; // binarizer threshold value (deeply averaged value)
-static int32_t lpf = 0;
-#if 0
-static uint8_t hist[5]; // histgram for tracking synchronization
+static int32_t bit_average = 0; // binarizer threshold value of non-clocking phase
+static int32_t bit_accum = 0; // binarizer accumulator
+static uint8_t hist[8]; // histgram for tracking synchronization
 static constexpr size_t NUM_HIST = sizeof(hist) / sizeof(hist[0]);
 static uint8_t hist_phase; // histgram phase
-static uint8_t hist_locked_phase; // found clock-invarint phase of the histgram
+static uint8_t hist_locked_phase; // found clock-boundary phase of the histgram
 static bool clock_found; // whether clock signal is found or not
 static bool prev_value; // previous detected binarized value
 static constexpr uint8_t HIST_MAX = 20; // maximum histgram value
-static constexpr uint8_t HIST_MIN = 1; // maximum histgram's valley which should found in clock synchronization
-#endif
+static constexpr uint8_t HIST_MIN = 5; // maximum histgram's valley which should found in clock synchronization
+
 
 // do sampling by certain period interval(currently 20ms)
 static void do_sample()
 {
 	// compute average value
 	int32_t re = (int32_t)read_ambient() << 8;
-	lpf += (re - lpf) >> 1;
 
-	average += (lpf - average) >> 8;
-#if 0
+	average += (re - average) >> 8;
+
 	// make histgram
-	bool bit = lpf < average;
+	bool bit = re < average;
 	if(prev_value != bit) hist[hist_phase] ++;
 	prev_value = bit;
 
 	// check data if there is a clock to synchronize
-	if(clock_found && hist_phase == hist_locked_phase)
+	if(clock_found)
 	{
-		state.push_bit(bit);
+		if(hist_phase == hist_locked_phase)
+		{
+			// clock changing phase
+//			printf("%d %d\n", bit_accum, bit_average);
+			bit_average += (bit_accum - bit_average) >> 8;
+			state.push_bit(bit_accum < bit_average);
+			bit_accum = 0;
+		}
+		else if(hist_phase != hist_locked_phase -1 &&
+				hist_phase != hist_locked_phase +1 &&
+				hist_phase -1 != hist_locked_phase &&
+				hist_phase +1 != hist_locked_phase )
+		{
+			// non clock phase
+			bit_accum += re;
+		}
 	}
 
 	// check whether there is clock found
@@ -199,15 +213,20 @@ static void do_sample()
 		uint8_t found_phase_top = 0;
 //		printf("%d(%d): " , clock_found, hist_locked_phase);
 		uint8_t min = 255;
+		uint8_t max = 0;
 		for(int i = 0 ; i < NUM_HIST; ++i) 
 		{
 //			printf("%d ", hist[i]);
 			if(hist[i] <= min)
 			{
 				min = hist[i];
-				found_phase_top = i;
 			}
 			if(hist[i] >= HIST_MAX) clear = true;
+			if(hist[i] >= max);
+			{
+				max = hist[i];
+				found_phase_top = i;
+			}
 		}
 //		printf("\n");
 		if(clear)
@@ -232,22 +251,24 @@ static void do_sample()
 			}
 		}
 	}
-#endif
+
 }
 
 
-
+#endif
 
 void poll_ambient()
 {
+#if 0
     EVERY_MS(20)
     {
         do_sample();
     }
     END_EVERY_MS
+#endif
 }
 
 uint32_t get_ambient()
 {
-	return average;
+	return read_ambient();
 }
