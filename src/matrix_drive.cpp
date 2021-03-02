@@ -726,7 +726,7 @@ void matrix_drive_loop() {
 }
 
 
-static void refresh_task(void* arg);
+//static void refresh_task(void* arg);
 
 void matrix_drive_early_setup()
 {
@@ -776,12 +776,12 @@ void matrix_drive_setup() {
 
 	init_dma();
 
-	xTaskCreatePinnedToCore(refresh_task, "LED_Refresh", 4096, NULL, 1, NULL, 0);
+//	xTaskCreatePinnedToCore(refresh_task, "LED_Refresh", 4096, NULL, 1, NULL, 0);
 
 
 }
 
-
+#if 0
 
 #define W 160
 #define H 60
@@ -855,3 +855,4 @@ static void refresh_task(void* arg) {
 
 
 
+#endif
