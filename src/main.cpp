@@ -13,6 +13,7 @@
 #include "mz_i2c.h"
 #include "mz_bme.h"
 #include "web_server.h"
+#include "ui.h"
 
 void setup() {
   // put your setup code here, to run once:
@@ -66,6 +67,7 @@ void setup() {
   init_calendar(); // sntp initialization needs to be located after network stack initialization
   init_i2c();
   init_bme280();
+  init_ambient();
 
   // find font partition and mmap into the address space
 	puts("Compressed BFF font initializing ...");
@@ -93,6 +95,8 @@ void setup() {
   web_server_setup();
 
   begin_console();
+
+  ui_setup();
 }
 
 void loop() {
@@ -104,4 +108,5 @@ void loop() {
   poll_ambient();
   poll_bme280();
   web_server_handle_client();
+  ui_process();
 }
