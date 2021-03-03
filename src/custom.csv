@@ -6,8 +6,8 @@ app1,     app,  ota_1,   0x310000,0x300000,
 conf,     data, spiffs,  0x610000, 0x80000,
 spiffs1,  data, spiffs,  0x690000,0x100000,
 spiffs0,  data, spiffs,  0x790000,0x100000,
-font0,    0x40, 0,       0x890000,0x300000,
-font1,    0x40, 1,       0xb90000,0x300000,
+font0,    0x40, 0,       0x890000,0x380000,
+font1,    0x40, 1,       0xc10000,0x380000,
 
 # note: keep that font start address written in extra_script.py, and the address written above, are in sync.
 # note: PlatformIO --target=uploadfs seems to upload SPIFFS image to the last partition which has 
