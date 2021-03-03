@@ -1,0 +1,26 @@
+{
+    "name": "FreeType-mz5",
+    "version": "2.10.4+mz5",
+    "description": "FreeType font library",
+    "keywords": "TrueType, FreeType, Font",
+    "build" : {
+        "flags" : [ "-DFT2_BUILD_LIBRARY" ],
+        "includeDir": "freetype-2.10.4/include",
+        "srcDir": "freetype-2.10.4/src",
+        "srcFilter" : [
+            "+<base/ftsystem.c>",
+            "+<base/ftinit.c>",
+            "+<base/ftdebug.c>",
+            "+<base/ftbase.c>",
+            "+<base/ftbbox.c>",
+            "+<base/ftglyph.c>",
+            "+<base/ftbbox.c>",
+            "+<base/ftglyph.c>",
+            "+<truetype/truetype.c>",
+            "+<smooth/smooth.c>",
+            "+<base/ftbitmap.c>",
+            "+<psnames/psnames.c>",
+            "+<sfnt/sfnt.c>"
+        ]
+    }
+}
