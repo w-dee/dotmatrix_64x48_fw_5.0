@@ -213,6 +213,9 @@ typedef uint8_t buf_t;
 static buf_t *buf;
 #define BUFSZ 4096
 
+static uint16_t led_config; // LED1642's config word
+static int current_gain_index = LED_CURRENT_GAIN_MAX; // current gain index 0 .. LED_CURRENT_GAIN_MAX
+
 
 static void IRAM_ATTR i2s_int_hdl(void *arg);
 
@@ -436,8 +439,9 @@ time frame:
               :
 16*8 = 128 clocks     :    Pixel brightness data(14) for next line 
 
+16*8 = 128 clocks     :    config word
 
-1232 clocks           :    dummy
+1104 clocks           :    dummy
 
  -- 2048 + 1616 clock boundary
 
@@ -509,33 +513,6 @@ static int IRAM_ATTR build_brightness(buf_t *buf, int row, int n)
 	return NUM_LED1642 * 16;
 } 
 
-/*
-static int IRAM_ATTR build_set_led1642_reg(buf_t *buf, int reg, uint16_t val)
-{
-	for(int i = 0; i < NUM_LED1642; ++i)
-	{
-		for(int bit = 15; bit >= 0; --bit)
-		{
-			buf_t t = 0;
-			// set bit
-			if((val & (1<<bit))) t |= B_COLSER;
-
-			// latch on
-			if(i == (NUM_LED1642 - 1) &&
-				bit <= reg-1)
-			{
-				// latch (clock count while latch is active; if reg = 7, set CR function)
-				t |= B_COLLATCH;
-			}
-
-			// store
-			*(buf++) = t;
-		}
-	}
-
-	return NUM_LED1642 * 16;
-}
-*/
 
 // build resister for resister no. 2
 static int IRAM_ATTR build_set_led1642_reg_2(buf_t *buf, uint16_t val)
@@ -565,6 +542,49 @@ static int IRAM_ATTR build_set_led1642_reg_2(buf_t *buf, uint16_t val)
 		}
 		else
 		{
+			buf[14] = (val & (1<< 1)) ? B_COLSER : 0;
+			buf[15] = (val & (1<< 0)) ? B_COLSER : 0;
+		}
+		buf += 16;
+	}
+
+	return NUM_LED1642 * 16;
+
+}
+
+// build resister for resister no. 7
+static int IRAM_ATTR build_set_led1642_reg_7(buf_t *buf, uint16_t val)
+{
+//	return build_set_led1642_reg(buf, 2, val);
+
+	for(int i = 0; i < NUM_LED1642; ++i)
+	{
+		buf[ 0] = (val & (1<<15)) ? B_COLSER : 0;
+		buf[ 1] = (val & (1<<14)) ? B_COLSER : 0;
+		buf[ 2] = (val & (1<<13)) ? B_COLSER : 0;
+		buf[ 3] = (val & (1<<12)) ? B_COLSER : 0;
+		buf[ 4] = (val & (1<<11)) ? B_COLSER : 0;
+		buf[ 5] = (val & (1<<10)) ? B_COLSER : 0;
+		buf[ 6] = (val & (1<< 9)) ? B_COLSER : 0;
+		buf[ 7] = (val & (1<< 8)) ? B_COLSER : 0;
+		buf[ 8] = (val & (1<< 7)) ? B_COLSER : 0;
+		if(i == (NUM_LED1642 -1))
+		{
+			buf[ 9] = (val & (1<< 6)) ? (B_COLSER|B_COLLATCH) : B_COLLATCH;
+			buf[10] = (val & (1<< 5)) ? (B_COLSER|B_COLLATCH) : B_COLLATCH;
+			buf[11] = (val & (1<< 4)) ? (B_COLSER|B_COLLATCH) : B_COLLATCH;
+			buf[12] = (val & (1<< 3)) ? (B_COLSER|B_COLLATCH) : B_COLLATCH;
+			buf[13] = (val & (1<< 2)) ? (B_COLSER|B_COLLATCH) : B_COLLATCH;
+			buf[14] = (val & (1<< 1)) ? (B_COLSER|B_COLLATCH) : B_COLLATCH;
+			buf[15] = (val & (1<< 0)) ? (B_COLSER|B_COLLATCH) : B_COLLATCH;
+		}
+		else
+		{
+			buf[ 9] = (val & (1<< 6)) ? B_COLSER : 0;
+			buf[10] = (val & (1<< 5)) ? B_COLSER : 0;
+			buf[11] = (val & (1<< 4)) ? B_COLSER : 0;
+			buf[12] = (val & (1<< 3)) ? B_COLSER : 0;
+			buf[13] = (val & (1<< 2)) ? B_COLSER : 0;
 			buf[14] = (val & (1<< 1)) ? B_COLSER : 0;
 			buf[15] = (val & (1<< 0)) ? B_COLSER : 0;
 		}
@@ -626,6 +646,8 @@ void IRAM_ATTR build_second_half()
 	{
 		bufp += build_brightness(bufp, r, n);
 	}
+
+	bufp += build_set_led1642_reg_7(bufp, led_config); // build LED1642 config word
 
 	while(bufp < buf + (2048 + 1616))
 	{
@@ -748,12 +770,12 @@ void matrix_drive_early_setup()
 	// LED1642 on the chain has delay on the data,
 	// so we must set SDO delay one by one from the first LED1642 on the chain
 	// to make all LED1642s have proper configuration.
+	led_config = 0;
+	led_config += (1<<13) | (1<<14);  // enable SDO delay and progressive delay
+	led_config += (1<<11) | (1<<12) |(1<<15); // Output turn-on/off time: on:180ns, off:150ns
+	led_config += 0b111111 | (1<<6); // set current gain
 	for(int i = 0; i <NUM_LED1642 * 4; ++i)
 	{
-		uint16_t led_config = 0;
-		led_config += (1<<13) | (1<<14);  // enable SDO delay and progressive delay
-		led_config += (1<<11) | (1<<12) |(1<<15); // Output turn-on/off time: on:180ns, off:150ns
-		led_config += 0b111111 | (1<<6); // set current gain
 		led_post_set_led1642_reg(7, led_config); // set control register
 	}
 
@@ -781,6 +803,39 @@ void matrix_drive_setup() {
 
 }
 
+
+// set led current gain.
+// valid range is: 0 to LED_CURRENT_GAIN_MAX 
+void matrix_drive_set_current_gain(int gain)
+{
+	// LED1642 has two range of current settings: high and low.
+	// ah ... so, below certain current value, we will use low
+	// current range, otherwise high current range.
+	bool range = false; // false:low true:high
+	if(gain < 0) gain = 0;
+	if(gain > LED_CURRENT_GAIN_MAX) gain = LED_CURRENT_GAIN_MAX;
+	current_gain_index = gain;
+
+	if(gain >= 40)
+	{
+		range = true; // use high range
+		gain -= 40;
+		gain += 0;
+	}
+
+	uint16_t config = led_config;
+	config &= ~(1<<6); // clear range bit
+	if(range) config |= (1<<6); // use high range
+	config &= ~ 0b111111; // the target bits are located at LSB
+	config |= (uint16_t) gain;
+	led_config = config;
+}
+
+// get current gain of LED1642
+int matrix_drive_get_current_gain()
+{
+	return current_gain_index;
+}
 #if 0
 
 #define W 160

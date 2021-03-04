@@ -2,6 +2,7 @@
 #include "ambient.h"
 #include "interval.h"
 #include <rom/crc.h>
+#include "matrix_drive.h"
 
 // Ambient sensor handling
 
@@ -147,10 +148,12 @@ static ambient_conn_state_t state;
 
 #endif
 // read raw ambient value
-static uint16_t read_ambient()
+static uint16_t _read_ambient()
 {
     return analogRead(ADC_NUM);
 }
+
+
 #if 0
 
 
@@ -276,16 +279,16 @@ static void do_sample()
 // * Ambient brightness setpoints have some margin at left(lower ambient) and right(higher ambient)
 // * Brightness between setpoints are linearly interpolated.
 // * Non-monotonic or no-significant setpoints are removed.
-// * Number of total setpoints are maintained within 8.
+// * Number of total setpoints are maintained within 16.
 
 
 
 
 static constexpr int16_t AMBIENT_MAX = 1024;
 static constexpr int16_t BRIGHTNESS_MAX = 256;
-static constexpr int16_t DEFAULT_BRIGHTNESS = 128;
+static constexpr int16_t DEFAULT_BRIGHTNESS = LED_CURRENT_GAIN_MAX / 2;
 static constexpr int16_t INVALID_AMBIENT = -1;
-static constexpr int16_t AMBIENT_MARGIN = 128;
+static constexpr int16_t AMBIENT_MARGIN = 64;
 
 struct setpoint_t
 {
@@ -299,7 +302,7 @@ static int compare_setpoint_t(const void *a, const void *b)
 }
 
 
-static constexpr int MAX_SETPOINTS = 8;
+static constexpr int MAX_SETPOINTS = 16;
 
 static setpoint_t setpoints[MAX_SETPOINTS];
 
@@ -409,7 +412,7 @@ static void _insert_setpoint(setpoint_t sp)
 
 
 // insert setpoint, by two value
-void insert_setpoint(int16_t ambient, int16_t brightness)
+void ambient_insert_setpoint(int16_t ambient, int16_t brightness)
 {
     _insert_setpoint({ambient, brightness});
 }
@@ -476,6 +479,67 @@ int16_t ambient_to_brightness(int16_t ambient)
     return DEFAULT_BRIGHTNESS;
 }
 
+static int16_t last_read_ambient;
+static uint32_t freeze_ambient_until;
+static bool ambient_freezing;
+static int16_t read_ambient()
+{
+	// the ambient raw value at my development desk is:
+	// 820 --- almost complete dark
+	// 500 --- under strong light
+
+	// According to the PhotoTransistor(PT)=NJL7302-F3's datasheet,
+	// light current vs illuminance is almost linear,
+	// IL = Ev*a + b
+	// where a = 0.5, b =~ 0
+
+	// the circuit measuring the ambient light is:
+
+	//    +  +3.3V
+	//    |
+	//    <
+	//    >   32k
+	//    <
+	//    |
+	//    *------------> to ADC
+	//    |
+	//    *--------+
+	//    |        |
+	//    <        C
+	//    >        >|  (NJL7302L-F3 PT)
+	//    < 10k    E
+	//    |        |
+	//    *--------+
+	//    |
+	//  ----- GND
+
+	// Vce (ie. ADC voltage) =
+	// Vce = IL * -7618.98956960328 + 0.785708299365338
+	// IL = (Vce - 0.785708299365338) / -7618.98956960328 
+	static int32_t lpf_value;
+	int32_t raw = _read_ambient() << 8; // '<<8' to increase integer arithmetic precision
+	lpf_value += (raw - lpf_value) >> 3;
+
+	if(!ambient_freezing)
+	{
+		float il = (lpf_value * (1.0 / 1000.0 / (float)(1<<8)) - 0.785708299365338) * (1.0 / -7618.98956960328 );
+		int lv = (int)(20000000.0 * il) + 50; // reformat to easy-to-handle range
+		if(lv < 0) lv = 0;
+		if(lv > AMBIENT_MAX) lv = AMBIENT_MAX;
+		last_read_ambient = lv;
+	}
+	else
+	{
+		if((int32_t)(freeze_ambient_until - millis()) <= 0)
+		{
+			ambient_freezing = false;
+		}
+	}
+
+	return last_read_ambient;
+}
+
+
 
 void init_ambient(void)
 {
@@ -485,20 +549,31 @@ void init_ambient(void)
 
 void poll_ambient()
 {
-#if 0
-    EVERY_MS(20)
+
+    EVERY_MS(200)
     {
-        do_sample();
+		int16_t ambient = read_ambient();
+		int index = ambient_to_brightness(ambient);
+		matrix_drive_set_current_gain(index);
     }
     END_EVERY_MS
-#endif
+
 }
 
-uint32_t get_ambient()
+int16_t get_ambient()
 {
-	return read_ambient();
+	return last_read_ambient;
 }
 
+
+#define AMBIENT_FREEZE_TIME 5000 // ambient brightness reading freezing time in ms
+// freezing ambient for certain time period. to 
+// ease brightness setting user interaction.
+void freeze_ambient()
+{
+	ambient_freezing = true;
+	freeze_ambient_until = millis() + AMBIENT_FREEZE_TIME;
+}
 
 void sensors_set_contrast_always_max(bool b)
 {
@@ -507,5 +582,14 @@ void sensors_set_contrast_always_max(bool b)
 
 void sensors_change_current_contrast(int amount)
 {
-	// TODO: implement this
+	freeze_ambient();
+	int16_t ambient = read_ambient();
+	int index = ambient_to_brightness(ambient);
+	index += amount;
+	if(index < 0) index = 0;
+	else if(index > LED_CURRENT_GAIN_MAX) index = LED_CURRENT_GAIN_MAX;
+	printf("ambient: New current gain %d at brightness %d\n", index, (int)ambient);
+	ambient_insert_setpoint(ambient, index);
+	ambient_dump();
+	matrix_drive_set_current_gain(index);
 }
