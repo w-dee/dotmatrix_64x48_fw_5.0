@@ -15,7 +15,7 @@ def do_make_archive():
     pio_build_dir = f".pio/build/{pio_env_name}"
 
     files = [
-        ["src/fonts/TakaoPGocthicC.ttf", "font"],
+        ["src/fonts/TakaoPGothicC.ttf", "font"],
         [f"{pio_build_dir}/spiffs.bin", "spiffs"],
         [f"{pio_build_dir}/firmware.bin", "app"] # the firmware must be the last
     ]
