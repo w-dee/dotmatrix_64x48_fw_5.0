@@ -1,0 +1,14 @@
+This directory contains FreeType and libaray.json.
+
+The FreeType is managed by "git submodule". 
+
+To checkout freetype/ subdirectory:
+
+ $ git submodule update
+
+
+To me:
+
+Keep in mind that the library version tag in sync, both:
+    ../../.gitmodules
+    library.json
