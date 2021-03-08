@@ -1,0 +1,5 @@
+[submodule "lib/FreeType-mz5/freetype"]
+	path = lib/FreeType-mz5/freetype
+	url = https://gitlab.freedesktop.org/freetype/freetype.git
+	branch = VER-2-10-4
+
