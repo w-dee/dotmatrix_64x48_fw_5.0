@@ -3,6 +3,7 @@
 #include "interval.h"
 #include <rom/crc.h>
 #include "matrix_drive.h"
+#include "settings.h"
 
 // Ambient sensor handling
 
@@ -72,6 +73,7 @@ static void init_setpoints()
     setpoints[0] = { .ambient  = 0, .brightness = DEFAULT_BRIGHTNESS }; 
     setpoints[MAX_SETPOINTS - 1] = { .ambient = AMBIENT_MAX, .brightness = DEFAULT_BRIGHTNESS };
 }
+
 
 // attempt to insert a setpoint.
 static void _insert_setpoint(setpoint_t sp)
@@ -183,6 +185,56 @@ void ambient_dump()
     }
 }
 
+// write settings to the settings store
+static void write_ambient_settings()
+{
+	// make string vector representing the array
+	string_vector vec;
+	for(int i = 0; i < MAX_SETPOINTS; ++i)
+		vec.push_back(String((int)setpoints[i].ambient) + "," + String((int)setpoints[i].brightness));
+
+	// write
+	settings_write_vector("ambient", vec, SETTINGS_OVERWRITE);
+}
+
+// load settings from the setgins store
+static void read_ambient_settings()
+{
+	string_vector vec;
+	if(!settings_read_vector("ambient", vec))
+	{
+		printf("ambient: ambient settings not found\n");
+		return; // not yet stored
+	}
+	if(vec.size() != MAX_SETPOINTS)
+	{
+		// invalid data
+		printf("ambient: corrupted data: data number mismatch\n");
+		return;
+	}
+	setpoint_t ar[MAX_SETPOINTS];
+	for(int i = 0; i < MAX_SETPOINTS; ++i)
+	{
+		String s = vec[i];
+		int amb = 0, bri = 0;
+		if(2 != sscanf(s.c_str(), "%d,%d", &amb, &bri))
+		{
+			printf("ambient: corrupted data: %s is not parsable\n", s.c_str());
+			return;
+		}
+		if(amb < INVALID_AMBIENT || amb > AMBIENT_MAX ||
+			bri < 0 || bri > BRIGHTNESS_MAX)
+		{
+			printf("ambient: corrupted data: %s: value out of range\n", s.c_str());
+			return; // data out of range
+		}
+		ar[i] = {(int16_t)amb, (int16_t)bri};
+	}
+
+	// all read.
+	memcpy(setpoints, ar, sizeof(ar));
+}
+
 
 // get ambient range at the given setpoint index
 static void get_ambient_range(int i, int16_t *min, int16_t *max)
@@ -289,6 +341,7 @@ static int16_t read_ambient()
 	{
 		if((int32_t)(freeze_ambient_until - millis()) <= 0)
 		{
+			if(ambient_freezing) write_ambient_settings();
 			ambient_freezing = false;
 		}
 	}
@@ -301,6 +354,7 @@ static int16_t read_ambient()
 void init_ambient(void)
 {
     init_setpoints();
+	read_ambient_settings();
 }
 
 
