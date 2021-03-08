@@ -1,20 +1,21 @@
 <!doctype html>
 
 <html>
-  <head>
+
+<head>
 	<meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, user-scalable=no" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
+	<meta name="viewport" content="width=device-width, user-scalable=no" />
+	<meta name="apple-mobile-web-app-capable" content="yes" />
 
-    <title>Mazo Clock 5</title>
-    <meta name="description" content="${description}" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <script src="js/riot+compiler.min.js"></script>
- <!--   <link rel="stylesheet" href="todo.css"> -->
+	<title>Mazo Clock 5</title>
+	<meta name="description" content="${description}" />
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<script src="js/riot+compiler.min.js"></script>
+	<!--   <link rel="stylesheet" href="todo.css"> -->
 
-    <!--[if lt IE 9]>
+	<!--[if lt IE 9]>
 		<!-- Browser not supported. -->
-    <![endif]-->
+	<![endif]-->
 
   </head>
 
@@ -165,12 +166,38 @@
 
 	<script type="riot/tag">
 		<firmwareupgrade>
-			<div>Specify "combined_rom.bin" and press "Update".</div>
-			<div>Uploading firmware takes about one minutes; Please be patient.</div>
-			<form method='POST' action='/update' enctype='multipart/form-data'>
+
+
+			<form method='POST' action='#' enctype='multipart/form-data' ref='form' id='upload_form' onsubmit={ submit }>
 				<input type='file' name='update'>
-				<input type='submit' value='Update'>
-			</form>
+				<input type='submit' value='Update'></form>
+			Progress: <span id='prg' ref='prg'>Not yet started</div> 
+
+
+			submit (e) {
+				// Using XHR because fetch()'s upload progress is incomplete
+				console.log("Started firmware upload");
+	 			e.preventDefault();
+				var pb = this.refs.prg;
+
+				xhr = new window.XMLHttpRequest();
+				xhr.upload.addEventListener('progress', function(evt) {
+					if (evt.lengthComputable) {
+						var per = evt.loaded / evt.total;
+						pb.innerText = Math.floor(per * 100) + "%";
+					}
+				}, false);
+				xhr.upload.addEventListener('load', function(evt) {
+					pb.innerText = "Upload finished"; // TODO: Error handing
+				}, false);
+
+				var form = this.refs.form;
+				var data = new FormData(form);
+				xhr.open("POST", "/update");
+				xhr.send(data);
+
+			}
+
 		</firmwareupgrade>
 	</script>
 

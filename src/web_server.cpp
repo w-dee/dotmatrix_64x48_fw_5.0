@@ -103,6 +103,16 @@ static void handleNotFound()
 {
 	if(!send_common_header()) return;
 	if(loadFromFS(server.uri())) return;
+
+	if(server.uri() == "/")
+	{
+		// filesystem content missing or filesystem mount failed.
+		// show fallback message
+		printf("SPIFFS content missing or mount failed. Showing fallback message.\n");
+		server.send(200, F("text/html"), updateIndex);
+		return;
+	}
+
 	String message = F("Not Found\n\n");
 	message += String(F("URI: "));
 	message += server.uri();
