@@ -22,7 +22,7 @@ def uploadfont(*args, **kwargs):
     UPLOADCMD='"$PYTHONEXE" "$UPLOADER" $UPLOADERFLAGS $SOURCE' )
     env.Execute(env["UPLOADCMD"])
 
-env.AlwaysBuild(env.Alias("uploadfont", None, uploadfont))
+
 env.AddCustomTarget(name="uploadfont",
     actions=uploadfont,
     dependencies=None,
