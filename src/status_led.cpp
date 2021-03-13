@@ -15,8 +15,8 @@
 // we can use two WS2812 bit in one transmittion unit:
 // upper nibble and lower nibble.
 // each nibble can be:
-// for WS2812's 0 symbol:   0b 1000
-// for WS2812's 1 symbol:   0b 1100
+// for WS2812's 0 symbol:   0b 1100
+// for WS2812's 1 symbol:   0b 1110
 
 // The important thing is: the data sent must not be interrupted
 // (must be continuous)
@@ -215,7 +215,5 @@ void status_led_loop()
 	status_led_array[1].g = 0;
 	status_led_array[1].b = 128;
 	status_led_commit();
-	status_led_commit();
-	delay(10);
 }
 
