@@ -98,9 +98,10 @@ void setup() {
 
   web_server_setup();
 
+  ui_setup();
+
   begin_console();
 
-  ui_setup();
 }
 
 void loop() {
