@@ -23,3 +23,4 @@ void status_led_early_setup(); // first initialization to blank all leds
 void status_led_commit(); // transmit data to WS2812
 void status_led_setup();
 void status_led_loop();
+void status_led_set_global_brightness(int v);

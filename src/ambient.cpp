@@ -4,6 +4,7 @@
 #include <rom/crc.h>
 #include "matrix_drive.h"
 #include "settings.h"
+#include "status_led.h"
 
 // Ambient sensor handling
 
@@ -366,6 +367,9 @@ void poll_ambient()
 		int16_t ambient = read_ambient();
 		int index = ambient_to_brightness(ambient);
 		matrix_drive_set_current_gain(index);
+        // map brightness index to 10 ... 256
+        int v = (256 - 10) * index / LED_CURRENT_GAIN_MAX + 10;
+        status_led_set_global_brightness(v);
     }
     END_EVERY_MS
 

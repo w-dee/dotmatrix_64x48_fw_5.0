@@ -5,6 +5,8 @@
 #include "rom/lldesc.h"
 #include "soc/uhci_reg.h"
 #include "soc/uhci_struct.h"
+#include "interval.h"
+#include <algorithm>
 
 // we use here inverted UART to transmit WS2812 signals.
 // using 3.333...MHz baud rate and 6bit transmission mode and
@@ -34,6 +36,8 @@ static uint8_t *status_led_buf = nullptr;
 static_assert(status_led_buf_sz % 4 == 0, "status_led_buf_sz must be multiple of 4");
 	// I'm not sure that DMA engine can do byte-wise transmit
 
+static int brightness = 256; // brightness
+
 static constexpr long unsigned int  ONEBIT_NS = (1200UL); // time needed to send one bit (in ns)
 static constexpr long unsigned int ONELED_NS = (ONEBIT_NS*24); // time needed to send one led (in ns)
 static constexpr long unsigned int TOTAL_LEDS_NS = (ONELED_NS * MAX_STATUS_LED); // total time needed to send all leds (in ns)
@@ -42,6 +46,11 @@ static constexpr long unsigned int  TOTAL_TIME_NS =  // total time needed to sen
 
 static constexpr uint32_t TOTAL_TIME_MS = (TOTAL_TIME_NS - 1) / 1000000 + 1 + 1; // total time in ms + headroom
 
+
+// ??? std:max is not constexpr dakke?
+static constexpr uint32_t sl_max(uint32_t a, uint32_t b) { return a>b ? a: b; }
+
+static constexpr uint32_t UPDATE_INTERVAL = sl_max(TOTAL_TIME_MS, static_cast<typeof(TOTAL_TIME_MS)>(20));
 
 
 static void init_dma_desc()
@@ -105,7 +114,11 @@ static void _commit_status_led()
 	uint8_t *buf = status_led_buf;
 	for(int i = 0; i < MAX_STATUS_LED; ++i)
 	{
-		uint32_t v = status_led_array[i].value;
+		s_rgb_t val = status_led_array[i];
+		val.b = val.b * brightness >> 8;
+		val.g = val.g * brightness >> 8;
+		val.r = val.r * brightness >> 8;
+		uint32_t v = val.value;
 		buf[0] =
 			( v & (1<<23) ? SYMBOL_H_LOWER_NIBBLE : SYMBOL_L_LOWER_NIBBLE ) |
 			( v & (1<<22) ? SYMBOL_H_UPPER_NIBBLE : SYMBOL_L_UPPER_NIBBLE ) ;
@@ -208,12 +221,17 @@ void status_led_setup()
 
 void status_led_loop()
 {
-	status_led_array[0].r = 128;
-	status_led_array[0].g = 0;
-	status_led_array[0].b = 128;
-	status_led_array[1].r = 0;
-	status_led_array[1].g = 0;
-	status_led_array[1].b = 128;
-	status_led_commit();
+	EVERY_MS(UPDATE_INTERVAL)
+	{
+		status_led_commit();
+	}
+	END_EVERY_MS
 }
 
+/**
+ * set status led global brightness
+ * */
+void status_led_set_global_brightness(int v)
+{
+	brightness = v;
+}
