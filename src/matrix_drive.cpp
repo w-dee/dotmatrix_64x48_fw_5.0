@@ -694,18 +694,18 @@ void IRAM_ATTR build_second_half()
 }
 
 
-uint8_t button_scan_bits; //!< holds currently pushed button bit-map ('1':pushed)
+uint8_t matrix_button_scan_bits; //!< holds currently pushed button bit-map ('1':pushed)
 static void IRAM_ATTR scan_button()
 {
 	int btn_num = r - 1; // 'r' represents currently buffering row, so subtract 1 from it
 	if(btn_num >= 0 && btn_num < MAX_BUTTONS)
 	{
-		typeof(button_scan_bits) mask = 1 << btn_num;
-		typeof(button_scan_bits) tmp = button_scan_bits;
+		typeof(matrix_button_scan_bits) mask = 1 << btn_num;
+		typeof(matrix_button_scan_bits) tmp = matrix_button_scan_bits;
 		tmp &= ~mask;
 		if(!digitalRead(IO_BUTTONSENSE))
 			tmp |= mask;
-		button_scan_bits = tmp;
+		matrix_button_scan_bits = tmp;
 	}
 }
 

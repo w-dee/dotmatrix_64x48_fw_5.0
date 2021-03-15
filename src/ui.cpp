@@ -1394,7 +1394,7 @@ void ui_setup()
 {
 	screen_clock = new screen_clock_t();
 
-	if(buttons[ORD_BUTTON_UP])
+	if(button_get_scan_bits() & BUTTON_UP)
 		screen_manager.push(new screen_led_test_t());
 	else
 		screen_manager.push(screen_clock);

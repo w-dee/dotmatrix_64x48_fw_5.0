@@ -30,14 +30,15 @@ void setup() {
 
   // before init_settings, check cancel buttion be pressed over 1sec
   delay(100); // wait for matrix row drive cycles several times
-  printf("--buttons: %x\n", button_scan_bits);
-  if(button_scan_bits & BUTTON_CANCEL)
+  button_check_physical_buttons_are_sane(); // check whether the button input is floating or not
+
+  if(button_get_scan_bits() & BUTTON_CANCEL)
   {
     printf("Cancel button pressed. Seeing if this button is pressed over 1 sec .");
     bool clear_it = true;
     for(int i = 0; i < 10; ++i)
     {
-      if(!(button_scan_bits & BUTTON_CANCEL)) { clear_it = false; break; }
+      if(!(button_get_scan_bits() & BUTTON_CANCEL)) { clear_it = false; break; }
       delay(100);
       printf(".");
       fflush(stdout);

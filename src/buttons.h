@@ -41,5 +41,11 @@ uint32_t button_get();
  */
 void button_push(uint32_t button);
 
+/**
+ * return a bitmap of *physical* button pressing state
+ * */
+uint32_t button_get_scan_bits();
+
+void button_check_physical_buttons_are_sane();
 #endif
 
