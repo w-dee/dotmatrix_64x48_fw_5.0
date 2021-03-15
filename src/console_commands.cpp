@@ -11,6 +11,7 @@
 #include "ir_rmt.h"
 #include "buttons.h"
 #include "mz_update.h"
+#include "mz_version.h"
 
 
 // wait for maximum 20ms, checking key type, returning
@@ -801,6 +802,29 @@ namespace cmd_keys
 }
 
 
+namespace cmd_ver
+{
+    struct arg_lit *help = arg_litn(NULL, "help", 0, 1, "Display help and exit");
+    struct arg_end *end = arg_end(5);
+    void * argtable[] = { help, end };
+
+    class _cmd : public cmd_base_t
+    {
+
+    public:
+        _cmd() : cmd_base_t("ver", "Show version", argtable) {}
+
+    private:
+        int func(int argc, char **argv)
+        {
+            return run_in_main_thread([] () -> int {
+                printf("%s\n", version_get_info_string().c_str());
+                return 0;
+            }) ;       
+        }
+    };
+}
+
 namespace cmd_t
 {
     struct arg_lit *help = arg_litn(NULL, "help", 0, 1, "Display help and exit");
@@ -840,5 +864,6 @@ void init_console_commands()
     static cmd_rmt::_cmd rmt_cmd;
     static cmd_reboot::_cmd reboot_cmd;
     static cmd_keys::_cmd keys_cmd;
+    static cmd_ver::_cmd ver_cmd;
     static cmd_t::_cmd t_cmd;
 }

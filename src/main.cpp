@@ -14,6 +14,7 @@
 #include "mz_bme.h"
 #include "web_server.h"
 #include "ui.h"
+#include "mz_version.h"
 
 void setup() {
   // put your setup code here, to run once:
@@ -23,6 +24,8 @@ void setup() {
   delay(1000);
 
   init_console(); // this also initializes the serial output and stdio
+  printf("\n\nGreetings. This is MZ5 firmware.\n");
+  printf("%s\n", version_get_info_string().c_str());
   show_ota_status();
   status_led_setup();
   matrix_drive_setup();
