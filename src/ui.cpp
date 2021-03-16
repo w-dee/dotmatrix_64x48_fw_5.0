@@ -100,7 +100,7 @@ class screen_manager_t
 
 public:
 	screen_manager_t() :
-		pendulum(std::bind(&screen_manager_t::process_draw, this), process_draw_interval) // 10ms interval
+		pendulum(std::bind(&screen_manager_t::process_draw, this), process_draw_interval)
 	{
 		transition = t_none;
 		in_transition = false;
