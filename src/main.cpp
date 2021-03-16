@@ -15,6 +15,7 @@
 #include "web_server.h"
 #include "ui.h"
 #include "mz_version.h"
+#include "pendulum.h"
 
 void setup() {
   // put your setup code here, to run once:
@@ -113,5 +114,6 @@ void loop() {
   poll_ambient();
   poll_bme280();
   web_server_handle_client();
+  poll_pendulum();
   ui_process();
 }

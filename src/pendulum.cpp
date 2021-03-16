@@ -1,25 +1,104 @@
 #include <Arduino.h>
-
+#include <vector>
 #include "pendulum.h"
+#include "interval.h"
 
 
-pendulum_t::pendulum_t(pendulum_t::callback_t _callback, uint32_t interval_ms) :
-	callback(_callback)
+/**
+ * pendulum scheduling class
+ * */
+class pendulum_scheduler_t
 {
-	timer = xTimerCreate("pendulum", pdMS_TO_TICKS(interval_ms), pdTRUE, this, callback_fn);
-	// TODO: panic if the timer allocation has failed
-	while(pdPASS != xTimerStart(timer, 0)); // do we need to put it into a loop?
+	std::vector<pendulum_t *> pendulums; // array of pendulums
+public:
+	/**
+	 * check all pendulum interval and fire event if the period is reached.
+	 * this method should be called 1ms intervally.
+	 * */
+	void check()
+	{
+		size_t i;
+		// scan for all pendulums for the timeout.
+		// this is not optimal. but it works well if the total timer consumer
+		// is small.
+		uint32_t tick = millis();
+		for(i = 0; i < pendulums.size(); ++i)
+		{
+			pendulum_t * pen = pendulums[i];
+			// always use [] operator; not iterator.
+			// because the array will be changed during pen->check()
+			if(pen) pen->check(tick);
+		} 
+	}
+
+protected:
+	/**
+	 * register pendulum instance.
+	 * */
+	void add(pendulum_t * pendulum)
+	{
+		// search for nullptr slot
+		for(auto && v : pendulums)
+		{
+			if(v == nullptr) v = pendulum;
+			return;
+		}
+		// nullptr slot not found; append one
+		pendulums.push_back(pendulum);
+	}
+
+	/**
+	 * remove pendulum instance
+	 * */
+	void remove(pendulum_t *pendulum)
+	{
+		// search for the pendulum;
+		// if found, do not erase, instead, put nullptr;
+		// because the instance will be removed during the iteration.
+		for(auto && v : pendulums)
+		{
+			if(v == pendulum)
+			{
+				v = nullptr;
+				return;
+			}
+		}
+	}
+
+	friend class pendulum_t;
+
+};
+static pendulum_scheduler_t pendulum_scheduler;
+
+
+void poll_pendulum()
+{
+	EVERY_MS(1)
+	{
+		pendulum_scheduler.check();
+	}
+	END_EVERY_MS
+}
+
+pendulum_t::pendulum_t(pendulum_t::callback_t _callback, uint32_t _interval_ms) :
+	 interval(_interval_ms), next_tick(millis() + _interval_ms), callback(_callback)
+{
+	pendulum_scheduler.add(this);
 }
 
 pendulum_t::~pendulum_t()
 {
-	while(pdPASS != xTimerStop(timer, 0)); // is this needed ?
-	while(pdPASS != xTimerDelete(timer, 0));
+	pendulum_scheduler.remove(this);
 }
 
-void pendulum_t::callback_fn(TimerHandle_t xTimer )
+void pendulum_t::check(uint32_t tick)
 {
-	pendulum_t *p = reinterpret_cast<pendulum_t*> (pvTimerGetTimerID(xTimer));
-	p->callback();
+	if((int32_t)(next_tick - tick) <= 0)
+	{
+		// timed out
+		callback();
+		next_tick += interval;
+		while((int32_t)(next_tick - tick) <= 0) next_tick += interval; // handles next tick has already been past
+	}
 }
 

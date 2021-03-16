@@ -2,27 +2,31 @@
 #define PENDULUM_H_
 
 #include <functional>
-#include <freertos/timers.h>
+
+class pendulum_scheduler_t;
 
 //! Class to call specified function by the specified interval, std::function way.
 class pendulum_t
 {
 public:
 	typedef std::function<void ()> callback_t;
+	uint32_t interval; //!< interval in ms
+	uint32_t next_tick; //!< next event tick
 
 protected:
-	TimerHandle_t timer;
 	callback_t callback;
 
 public: // check pendulum handler does not call blocking functions
-	pendulum_t(callback_t _callback, uint32_t interval_ms);
+	pendulum_t(callback_t _callback, uint32_t _interval_ms);
 	~pendulum_t();
 
 private:
-	static void callback_fn(TimerHandle_t xTimer );
+	void check(uint32_t check);
+
+	friend class pendulum_scheduler_t;
 };
 
-
+void poll_pendulum();
 
 
 #endif
