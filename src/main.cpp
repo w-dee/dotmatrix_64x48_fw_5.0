@@ -18,7 +18,30 @@
 #include "pendulum.h"
 #include "fonts/font_ft.h"
 
+#define MY_CONFIG_ARDUINO_LOOP_STACK_SIZE 32768
+extern TaskHandle_t loopTaskHandle; // defined in main.cpp of Arduino core
+extern void loopTask(void *pvParameters); // defined in main.cpp of Arduino core 
+
 void setup() {
+  // AARRRRRRRRRRGGGGHHHHHHHHHHHHHHHHHHHHHHH!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  // I have no idea about properly increase the arduino user task's stack size.
+  // Using -DCONFIG_ARDUINO_LOOP_STACK_SIZE=XXXXXX DOES NOT WORK because
+  // it's redefined at sdkconfig.h and there is no way to use custom sdkconfig.h
+  // at this time. I'm not sure if I can do that using ESP-IDF with Arduino
+  // option enabled, not using ESP-IDF and the Arduino core separately.
+
+  // So, ... This is one possible solution. Spawining a new loop task with large
+  // stack size, and delete ole one.
+  static volatile bool second_run = false;
+  if(!second_run)
+  {
+    second_run = true;
+    xTaskCreateUniversal(loopTask, "loopTask", MY_CONFIG_ARDUINO_LOOP_STACK_SIZE,
+      NULL, 1, &loopTaskHandle, CONFIG_ARDUINO_RUNNING_CORE);
+    vTaskDelete(nullptr); // suicide
+    for(;;) { /* TODO: panic */ ; }
+  }
+
   // put your setup code here, to run once:
   status_led_early_setup();
   matrix_drive_early_setup(); // blank all leds

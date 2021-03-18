@@ -5,7 +5,7 @@
 frame_buffer_t DRAM_ATTR buffer_one;
 frame_buffer_t DRAM_ATTR buffer_two; // for double buffering
 frame_buffer_t DRAM_ATTR * current_frame_buffer = &buffer_one;
-frame_buffer_t DRAM_ATTR * bg_frame_buffer DRAM_ATTR = &buffer_two;
+frame_buffer_t DRAM_ATTR * bg_frame_buffer = &buffer_two;
 
 static int get_utf8_bytes(uint8_t c)
 {
@@ -104,7 +104,7 @@ bool frame_buffer_t::clip(int &fx, int &fy, int &x, int &y, int &w, int &h) cons
 	if(y + h >= get_height())
 		h -= (y + h) - get_height();
 
-	return w >= 0 && h >= 0;
+	return w > 0 && h > 0;
 }
 
 

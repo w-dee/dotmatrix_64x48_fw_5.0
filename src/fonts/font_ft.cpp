@@ -134,12 +134,16 @@ void ft_font_t::put(int32_t chr, int level, int x, int y, frame_buffer_t & fb) c
 	// adjust bounding box
     int pitch = face->glyph->bitmap.pitch;
 	x += face->glyph->bitmap_left;
-	y += face->glyph->bitmap_top;
+	y += GLYPH_HEIGHT_PX - 4 - face->glyph->bitmap_top; // TODO: fixme: 4 is a magic number depending on the font
 	int fx = 0, fy = 0;
 	int w = face->glyph->bitmap.width, h = face->glyph->bitmap.rows;
 
 	// clip font bounding box
 	if(!fb.clip(fx, fy, x, y, w, h)) return;
+
+//printf("bitmap: %d %d %d %d %d\n", face->glyph->bitmap.pitch, face->glyph->bitmap_left, face->glyph->bitmap_top,
+//    face->glyph->bitmap.rows, face->glyph->bitmap.width);
+//printf("geometry: %d %d %d %d %d %d\n", fx, fy, x, y, w, h);
 
 	// draw the pattern
 	const unsigned char *p = face->glyph->bitmap.buffer;
@@ -147,7 +151,6 @@ void ft_font_t::put(int32_t chr, int level, int x, int y, frame_buffer_t & fb) c
 	for(int yy = y; yy < h+y; ++yy, ++fy)
 	{
 		const uint8_t * line = p + fy * pitch;
-//		printf("line %d: %02x\r\n", fy, line);
 		int fxx = fx;
 		for(int xx = x; xx < w+x; ++xx, ++fxx)
 		{

@@ -1346,9 +1346,9 @@ protected:
 		// draw marquee
 		if(font_ft.get_available())
 		{
-			fb().draw_text(-marquee_x              , 36, 255, marquee, font_ft);
+			fb().draw_text(-marquee_x              , 35, 255, marquee, font_ft);
 			if(marquee_len > LED_MAX_LOGICAL_COL)
-				fb().draw_text(-marquee_x + marquee_len, 36, 255, marquee, font_ft);
+				fb().draw_text(-marquee_x + marquee_len, 35, 255, marquee, font_ft);
 		}
 		return true;
 	}
@@ -1401,6 +1401,7 @@ void ui_setup()
 	screen_manager.begin();
 
 	screen_clock = new screen_clock_t();
+	screen_clock->set_marquee("駄目です");
 
 	if(button_get_scan_bits() & BUTTON_UP)
 		screen_manager.push(new screen_led_test_t());
