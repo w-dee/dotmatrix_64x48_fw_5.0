@@ -36,11 +36,11 @@ void ft_font_t::begin()
 {
     unsigned long fre = xPortGetFreeHeapSize();
     printf("Memory free area before FreeType font load: %ld\n", fre);
-    FT_Trace_Enable();
-    setenv("FT2_DEBUG", "any:7", 1);
+//    FT_Trace_Enable();
+//    setenv("FT2_DEBUG", "any:7", 1);
     _begin();
-    unsetenv("FT2_DEBUG");
-    FT_Trace_Disable();
+//    unsetenv("FT2_DEBUG");
+//    FT_Trace_Disable();
     unsigned long fre_a = xPortGetFreeHeapSize();
     printf("Memory free area after FreeType font load: %ld, %ld bytes consumed.\n", fre_a, fre - fre_a);;
 }
