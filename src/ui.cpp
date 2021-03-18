@@ -18,7 +18,7 @@
 
 #include "fonts/font_5x5.h"
 #include "fonts/font_4x5.h"
-#include "fonts/font_bff.h"
+#include "fonts/font_ft.h"
 #include "fonts/font_aa.h"
 
 class screen_clock_t;
@@ -1270,9 +1270,9 @@ public:
 private:
 	void _set_marquee(const String &s)
 	{
-		if(!font_bff.get_available()) return;
+		if(!font_ft.get_available()) return;
 		marquee = s;
-		marquee_len = fb().get_text_width(s, font_bff);
+		marquee_len = fb().get_text_width(s, font_ft);
 		if(marquee_x >= marquee_len) marquee_x = 0;
 	}
 
@@ -1338,11 +1338,11 @@ protected:
 #endif
 
 		// draw marquee
-		if(font_bff.get_available())
+		if(font_ft.get_available())
 		{
-			fb().draw_text(-marquee_x              , 36, 255, marquee, font_bff);
+			fb().draw_text(-marquee_x              , 36, 255, marquee, font_ft);
 			if(marquee_len > LED_MAX_LOGICAL_COL)
-				fb().draw_text(-marquee_x + marquee_len, 36, 255, marquee, font_bff);
+				fb().draw_text(-marquee_x + marquee_len, 36, 255, marquee, font_ft);
 		}
 		return true;
 	}

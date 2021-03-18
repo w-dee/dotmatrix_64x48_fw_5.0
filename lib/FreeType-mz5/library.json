@@ -2,25 +2,30 @@
     "name": "FreeType-mz5",
     "version": "2.10.4+mz5",
     "description": "FreeType font library",
-    "keywords": "TrueType, FreeType, Font",
+    "keywords": "TrueType, FreeType, Font, Glyph",
     "build" : {
-        "flags" : [ "-DFT2_BUILD_LIBRARY" ],
+        "flags" : [ "-DFT2_BUILD_LIBRARY", 
+            "-DFT_CONFIG_OPTIONS_H=\\\"mz_ftoption.h\\\"",
+            "-DFT_CONFIG_MODULES_H=\\\"mz_ftmodule.h\\\""],
         "includeDir": "freetype/include",
-        "srcDir": "freetype/src",
+        "srcDir": ".",
         "srcFilter" : [
-            "+<base/ftsystem.c>",
-            "+<base/ftinit.c>",
-            "+<base/ftdebug.c>",
-            "+<base/ftbase.c>",
-            "+<base/ftbbox.c>",
-            "+<base/ftglyph.c>",
-            "+<base/ftbbox.c>",
-            "+<base/ftglyph.c>",
-            "+<truetype/truetype.c>",
-            "+<smooth/smooth.c>",
-            "+<base/ftbitmap.c>",
-            "+<psnames/psnames.c>",
-            "+<sfnt/sfnt.c>"
-        ]
+            "+<freetype/src/base/ftsystem.c>",
+            "+<freetype/src/base/ftinit.c>",
+            "+<freetype/src/base/ftdebug.c>",
+            "+<freetype/src/base/ftbase.c>",
+            "+<freetype/src/base/ftbbox.c>",
+            "+<freetype/src/base/ftglyph.c>",
+            "+<freetype/src/base/ftbbox.c>",
+            "+<freetype/src/base/ftglyph.c>",
+            "+<freetype/src/truetype/truetype.c>",
+            "+<freetype/src/smooth/smooth.c>",
+            "+<freetype/src/base/ftbitmap.c>",
+            "+<freetype/src/psnames/psnames.c>",
+            "+<freetype/src/sfnt/sfnt.c>",
+            "+<freetype/src/cff/cff.c>",
+            "+<freetype/src/psaux/psaux.c>"
+        ],
+        "extraScript": "extra_script.py"
     }
 }

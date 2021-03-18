@@ -1,6 +1,8 @@
 #ifndef FONT_H
 #define FONT_H
 
+#include <stdint.h>
+
 class frame_buffer_t;
 
 //! abstract simple font class

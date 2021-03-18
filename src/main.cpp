@@ -16,6 +16,7 @@
 #include "ui.h"
 #include "mz_version.h"
 #include "pendulum.h"
+#include "fonts/font_ft.h"
 
 void setup() {
   // put your setup code here, to run once:
@@ -73,30 +74,7 @@ void setup() {
   init_i2c();
   init_bme280();
   init_ambient();
-
-  // find font partition and mmap into the address space
-	puts("Compressed BFF font initializing ...");
-  const esp_partition_t * part =
-    esp_partition_find_first((esp_partition_type_t)0x40,
-    (esp_partition_subtype_t)get_current_active_partition_number(), NULL); 
-  if(part == nullptr)
-  {
-    // TODO: panic
-    printf("No font partitions found!\n");
-  }
-  printf("Font partition start: 0x%08x, mapped to: ", part->address);
-
-  const void *map_ptr;
-  spi_flash_mmap_handle_t map_handle;
-  if(ESP_OK != esp_partition_mmap(part, 0, part->size, SPI_FLASH_MMAP_DATA, &map_ptr, &map_handle))
-  {
-    // TODO: panic
-  }
-
-  const uint8_t * ptr = static_cast<const uint8_t *>(map_ptr);
-  printf("%p\r\n", ptr);
-  printf("Font data magic: %02x %02x %02x %02x\r\n", ptr[0], ptr[1], ptr[2], ptr[3]);
-
+  init_font_ft();
   web_server_setup();
 
   ui_setup();
