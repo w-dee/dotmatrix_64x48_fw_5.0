@@ -84,11 +84,11 @@ private:
 
 class screen_manager_t
 {
-	pendulum_t pendulum;
-	transition_t transition; //!< current running transition
-	bool in_transition; //!< whether the transition is under progress
+	pendulum_t *pendulum = nullptr;
+	transition_t transition = t_none; //!< current running transition
+	bool in_transition = false; //!< whether the transition is under progress
 	std::vector<screen_base_t *> stack;
-	bool stack_changed;
+	bool stack_changed = false;
 	int8_t tick_interval_50 = 0; //!< to count 10ms tick to process 50ms things
 	int8_t blink_intensity = 0; //!< cursor blink intensity value
 	static uint32_t constexpr process_draw_interval = 50; //!< process interval in ms
@@ -99,14 +99,20 @@ class screen_manager_t
 	bool processing = false; //!< whether processing is ongoing or not
 
 public:
-	screen_manager_t() :
-		pendulum(std::bind(&screen_manager_t::process_draw, this), process_draw_interval)
+	screen_manager_t()
 	{
 		transition = t_none;
 		in_transition = false;
 		stack_changed = false;
 		next_draw_millis = millis() + process_draw_interval;
 		next_idle_millis = millis() + process_idle_interval;
+	}
+
+	void begin()
+	{
+		if(!pendulum)
+			pendulum = new pendulum_t(std::bind(&screen_manager_t::process_draw, this),
+				process_draw_interval);
 	}
 
 	void show(transition_t tran)
@@ -1392,6 +1398,8 @@ protected:
 
 void ui_setup()
 {
+	screen_manager.begin();
+
 	screen_clock = new screen_clock_t();
 
 	if(button_get_scan_bits() & BUTTON_UP)

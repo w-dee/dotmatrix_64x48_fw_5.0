@@ -37,6 +37,7 @@ protected:
 	 * */
 	void add(pendulum_t * pendulum)
 	{
+//		printf("pendulum add : %p\n", pendulum);
 		// search for nullptr slot
 		for(auto && v : pendulums)
 		{
@@ -52,6 +53,7 @@ protected:
 	 * */
 	void remove(pendulum_t *pendulum)
 	{
+//		printf("pendulum remove : %p\n", pendulum);
 		// search for the pendulum;
 		// if found, do not erase, instead, put nullptr;
 		// because the instance will be removed during the iteration.
@@ -93,6 +95,8 @@ pendulum_t::~pendulum_t()
 
 void pendulum_t::check(uint32_t tick)
 {
+//	printf("pendulum: id:%p interval:%lu, next_tick:%lu, tick:%lu\n",
+//		this, (unsigned long)interval, (unsigned long)next_tick, (unsigned long)tick);
 	if((int32_t)(next_tick - tick) <= 0)
 	{
 		// timed out
