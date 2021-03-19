@@ -111,7 +111,7 @@ void loop() {
   if(!not_first)
   {
     not_first = true;
-    wifi_start(); // I dont know why wifi_start() should be better if it is to be called within loop().
+    wifi_start(); // I dont know why it is better if wifi_start() is called within loop().
   }
 
   // put your main code here, to run repeatedly:
