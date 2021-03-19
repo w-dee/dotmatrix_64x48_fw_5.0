@@ -44,7 +44,6 @@ static void led_gpio_init()
 	pinMode(IO_LED1642_RST, OUTPUT);
 	pinMode(IO_BUTTONSENSE, INPUT);
 
-
 	// note: software reset (SW_CPU_RESET) seems
 	// that it *does not* reset the pin matrix assignment.
 	// so we will need to reset them at here.
@@ -628,11 +627,6 @@ void IRAM_ATTR build_first_half()
 		*(bufp++)  = 0;
 	}
 
-/*
-	for(int i = 0; i < 2048; ++i)
-		buf[i] = 0;
-	buf[2047] = 0xff;
-*/
 	// word order shuffle
 	shuffle_bytes(buf, 2048);
 }
@@ -685,11 +679,6 @@ void IRAM_ATTR build_second_half()
 
 	tmpp[0] |= B_ROWLATCH; // let HCT595 latch the buffer
 
-/* 
-	for(int i = 2048; i < 4096; ++i)
-		buf[i] = 0;
-	buf[4095] = 0xff;
-*/
 	// word order shuffle
 	shuffle_bytes(buf + 2048, 2048);
 
@@ -755,7 +744,6 @@ void matrix_drive_loop() {
 
 void matrix_drive_early_setup()
 {
-
 	// blank all matrix LEDs
 	led_gpio_init();
 
@@ -797,7 +785,27 @@ void matrix_drive_setup() {
 
 	led_post();
 
+	led_hard_reset_led1642(); // again, reset and set control register for all LED1642's
+	int clock = NUM_LED1642 * 4 * 128;
+	for(int i = 0; i <NUM_LED1642 * 4; ++i)
+	{
+		led_post_set_led1642_reg(7, led_config); // set control register
+	}
+
 	led_post_set_led1642_reg(1, 0xffff); // full LEDs on
+	clock += 128;
+
+	// before doing DMA operation,
+	// send dummy clocks to LED1642, to set internal PWM counter as ZERO
+	// note that PWM counter overflows at 4096 and becomes zero.
+	clock = 4096 - clock % 4096;
+	for(int i = 0; i < clock; ++i)
+	{
+		digitalWrite(IO_COLCLK, 1);
+		digitalWrite(IO_COLCLK, 0);
+	}
+
+	// at this point, LED1642's internal PWM counter must be zero
 
 	init_dma();
 
