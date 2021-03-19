@@ -31,7 +31,7 @@ void setup() {
   // option enabled, not using ESP-IDF and the Arduino core separately.
 
   // So, ... This is one possible solution. Spawining a new loop task with large
-  // stack size, and delete ole one.
+  // stack size, and delete old one.
   static volatile bool second_run = false;
   if(!second_run)
   {
