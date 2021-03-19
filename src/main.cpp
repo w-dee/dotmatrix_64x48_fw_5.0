@@ -107,6 +107,13 @@ void setup() {
 }
 
 void loop() {
+  static bool not_first = false;
+  if(!not_first)
+  {
+    not_first = true;
+    wifi_start(); // I dont know why wifi_start() should be better if it is to be called within loop().
+  }
+
   // put your main code here, to run repeatedly:
   matrix_drive_loop();
   button_update();

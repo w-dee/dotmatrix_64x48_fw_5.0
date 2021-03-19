@@ -146,7 +146,6 @@ void wifi_setup()
 
 	// try to connect
 	WiFi.mode(WIFI_STA);
-	wifi_start();
 
 }
 
