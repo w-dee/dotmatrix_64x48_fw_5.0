@@ -391,7 +391,10 @@ static constexpr uint32_t gamma_255_to_4095(int in)
 	using std::pow;
   return /*byte_reverse*/(
   	/*bit_interleave*/(
-  	(uint32_t) (pow((float)(in+20) / (255.0+20), (float)3.5) * 3800)));  
+  	(uint32_t) (pow(
+		  	(float)((in+5.0f) / (255.0f+5.0f)),
+			(float)2.2)
+				* 3800)));  
 }
 
 #define G4(N) gamma_255_to_4095((N)), gamma_255_to_4095((N)+1), \
