@@ -670,6 +670,9 @@ void IRAM_ATTR build_second_half()
 	}
 
 	tmpp[0] |= B_ROWLATCH; // let HCT595 latch the buffer with '1' (clear all LED)
+	tmpp[1] |= B_ROWLATCH; // To make sure, let latch pulse reasonably long
+	tmpp[2] |= B_ROWLATCH; // To make sure, let latch pulse reasonably long
+	tmpp[3] |= B_ROWLATCH; // To make sure, let latch pulse reasonably long
 
 	bufp += build_brightness(bufp, r, 15); // global latch of brightness data
 
@@ -678,6 +681,9 @@ void IRAM_ATTR build_second_half()
 	bufp += build_set_led1642_reg_2(bufp, 0xffff); // full LEDs on
 
 	tmpp[0] |= B_ROWLATCH; // let HCT595 latch the buffer
+	tmpp[1] |= B_ROWLATCH; // To make sure, let latch pulse reasonably long
+	tmpp[2] |= B_ROWLATCH; // To make sure, let latch pulse reasonably long
+	tmpp[3] |= B_ROWLATCH; // To make sure, let latch pulse reasonably long
 
 	// word order shuffle
 	shuffle_bytes(buf + 2048, 2048);
