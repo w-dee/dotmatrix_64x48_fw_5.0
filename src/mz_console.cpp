@@ -185,6 +185,8 @@ void console_probe()
  * */
 static void console_task(void *)
 {
+	console_probe(); // will take a few seconds, so call it from the non-main thread
+
 	// Note, this function is to be run inside separete thread
 	char *line;
 	for(;;) {
@@ -254,8 +256,6 @@ static void load_console_history()
 void begin_console()
 {
 	load_console_history();
-
-	console_probe();
 
 	xTaskCreate(
 	      console_task,           /* Task function. */
