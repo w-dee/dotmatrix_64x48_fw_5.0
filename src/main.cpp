@@ -99,21 +99,12 @@ void setup() {
   init_ambient();
   init_font_ft();
   web_server_setup();
-
   ui_setup();
-
   begin_console();
-
+  wifi_start();
 }
 
 void loop() {
-  static bool not_first = false;
-  if(!not_first)
-  {
-    not_first = true;
-    wifi_start(); // I dont know why it is better if wifi_start() is called within loop().
-  }
-
   // put your main code here, to run repeatedly:
   matrix_drive_loop();
   button_update();
