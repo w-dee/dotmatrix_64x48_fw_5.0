@@ -16,12 +16,12 @@ const char * get_build_date();
 String version_get_info_string()
 {
     return
-        String("ESP_IDF_version: \"") + esp_get_idf_version() + "\""
+        String("\"ESP_IDF_version\": \"") + esp_get_idf_version() + "\""
         ",\n" +
-        String("Arduino_version: \"") + ARDUINO_ESP32_RELEASE + "\""
+        String("\"Arduino_version\": \"") + ARDUINO_ESP32_RELEASE + "\""
         ",\n" +
-        String("Source_git_revision: \"") + get_git_rev() + "\""
+        String("\"Source_git_revision\": \"") + get_git_rev() + "\""
         ",\n" +
-        String("Build_date: \"") + get_build_date() + "\""
+        String("\"Build_date\": \"") + get_build_date() + "\""
          ;
 }
