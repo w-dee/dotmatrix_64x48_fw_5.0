@@ -1401,7 +1401,7 @@ void ui_setup()
 	screen_manager.begin();
 
 	screen_clock = new screen_clock_t();
-	screen_clock->set_marquee("駄目です");
+	screen_clock->set_marquee("ダイエットについて質問です。もやしダイエットと野菜スープダイエットを真似したところやはり だめなんでしょうかね・・意外と野菜は摂るようになったのでいいことですが、バイキングに走ったり大食いになったりします。私だけだとおもいますが それだけでやせようとは思いませんが （やせれたらいいですが）便秘になるし 体重もかわっていません・・もやしダイエットは黒酢より普通の米酢使用したりスープダイエットはかつおぶしとか省略してます・・どこがちがうのでしょうか？");
 
 	if(button_get_scan_bits() & BUTTON_UP)
 		screen_manager.push(new screen_led_test_t());
