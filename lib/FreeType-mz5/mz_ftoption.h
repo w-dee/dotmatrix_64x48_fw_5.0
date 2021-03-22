@@ -145,7 +145,7 @@ FT_BEGIN_HEADER
    *         file `ftconfig.h` either statically or through the `configure`
    *         script on supported platforms.
    */
-#undef FT_CONFIG_OPTION_FORCE_INT64
+#define FT_CONFIG_OPTION_FORCE_INT64
 
 
   /**************************************************************************
