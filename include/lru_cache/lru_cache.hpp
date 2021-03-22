@@ -14,7 +14,7 @@
 /*  OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.            */
 /******************************************************************************/
 
-// modified by W.Dee to drop boost support
+// modified by W.Dee to drop boost support and to use "using" type alias
 
 #ifndef _lru_cache_h_
 #define _lru_cache_h_
@@ -27,15 +27,10 @@
 #include "lru_cache/lru_cache_using_std.hpp"
 
 
-// See http://www.gotw.ca/gotw/079.htm for why we can't
-// just use a templated typedef.
+template <typename K,typename V>
+using lru_cache_using_std_map = lru_cache_using_std<K, V, std::map>;
 
-template <typename K,typename V> struct lru_cache_using_std_map {
-  typedef lru_cache_using_std<K,V,std::map> type;
-};
-
-template <typename K,typename V> struct lru_cache_using_std_unordered_map {
-  typedef lru_cache_using_std<K,V,std::unordered_map> type;
-};
+template <typename K,typename V>
+using lru_cache_using_std_unordered_map = lru_cache_using_std<K, V, std::unordered_map>;
 
 #endif

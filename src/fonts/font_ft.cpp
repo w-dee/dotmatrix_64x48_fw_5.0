@@ -75,7 +75,7 @@ class metrics_cache_t
             };
     }
 
-    lru_cache_using_std_unordered_map<uint32_t, entry_t>::type lru;
+    lru_cache_using_std_unordered_map<uint32_t, entry_t> lru;
 
 public:
     metrics_cache_t() : face(nullptr),
