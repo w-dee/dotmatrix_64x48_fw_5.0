@@ -188,7 +188,7 @@ void ft_font_t::put(int32_t chr, int level, int x, int y, frame_buffer_t & fb) c
 
 	// adjust bounding box
 	x += metrics.left;
-	y += GLYPH_HEIGHT_PX - 3 - metrics.top; // TODO: fixme: 4 is a magic number depending on the font
+	y += GLYPH_HEIGHT_PX - 3 - metrics.top; // TODO: fixme: 3 is a magic number depending on the font
 	int fx = 0, fy = 0;
 	int w = metrics.w,
         h = metrics.h;
