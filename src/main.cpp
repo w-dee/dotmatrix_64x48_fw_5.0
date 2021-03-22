@@ -18,7 +18,7 @@
 #include "pendulum.h"
 #include "fonts/font_ft.h"
 
-#define MY_CONFIG_ARDUINO_LOOP_STACK_SIZE 32768
+#define MY_CONFIG_ARDUINO_LOOP_STACK_SIZE 16384U
 extern TaskHandle_t loopTaskHandle; // defined in main.cpp of Arduino core
 extern void loopTask(void *pvParameters); // defined in main.cpp of Arduino core 
 

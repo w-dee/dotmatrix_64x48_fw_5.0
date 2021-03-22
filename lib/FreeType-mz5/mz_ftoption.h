@@ -399,7 +399,15 @@ FT_BEGIN_HEADER
    * The size in bytes of the render pool used by the scan-line converter to
    * do all of its work.
    */
-#define FT_RENDER_POOL_SIZE  16384L
+
+// The pool is allocated in the stack as an array of TCell_ .
+// A TCell_ is ... umm ... must be a intermediate buffer for one or more pixels.
+// For our use, the bitmap will be 16x16 at largest, so the total cell
+// number will not exceed 256.
+// sizeof(TCell_) =  24, so it must be enough 256*24 = 6144 bytes for render pool.
+// ..... Is this collect? Sorry I don't know well.
+
+#define FT_RENDER_POOL_SIZE 8192L
 
 
   /**************************************************************************
