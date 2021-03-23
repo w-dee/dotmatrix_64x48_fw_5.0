@@ -56,7 +56,7 @@ static void led_gpio_init()
 }
 
 /**
- * Make any GPIO driving LED1642 and WS2812 low
+ * Make any GPIO driving LED1642
  * */
 static void led_gpio_set_low()
 {
