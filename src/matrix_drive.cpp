@@ -385,12 +385,12 @@ static void init_dma() {
 /**
  * Gamma curve function
  */
-static constexpr uint32_t gamma_255_to_4095(int in)
+static constexpr uint16_t gamma_255_to_4095(int in)
 {
 	using std::pow;
   return /*byte_reverse*/(
   	/*bit_interleave*/(
-  	(uint32_t) (pow(
+  	(uint16_t) (pow(
 		  	(float)((in+5.0f) / (255.0f+5.0f)),
 			(float)2.2)
 				* 3800)));  
@@ -405,7 +405,7 @@ static constexpr uint32_t gamma_255_to_4095(int in)
 /**
  * Gamma curve table
  */
-static uint32_t DRAM_ATTR gamma_table[256] = {
+static uint16_t DRAM_ATTR gamma_table[256] = {
 	G64(0) G64(64) G64(128) G64(192)
 	}; // this table must be accessible from interrupt routine;
 	// do not place in FLASH !!
@@ -468,7 +468,7 @@ static int IRAM_ATTR build_brightness(buf_t *buf, int row, int n)
 		int x = i * 8 + (n >> 1);
 		int y = (row << 1) + (n & 1);
 
-		uint32_t br = /*(x%48)==y ? 0xaaa: 0;// */gamma_table[array[y][x]];
+		uint16_t br = /*(x%48)==y ? 0xaaa: 0;// */gamma_table[array[y][x]];
 
 		buf[ 0] = (br & (1<<15)) ? B_COLSER : 0;
 		buf[ 1] = (br & (1<<14)) ? B_COLSER : 0;
