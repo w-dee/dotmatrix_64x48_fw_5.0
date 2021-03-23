@@ -1321,11 +1321,11 @@ protected:
 
 		sprintf_P(buf, PSTR("%2d/%2d"), tm.tm_mon + 1, tm.tm_mday);
 		fb().draw_text(26, 19, 255, buf, font_bold_digits);
-#if 0
+
 		int temp = bme280_result.temp_10; // TODO: Fahrenheit degree
 		if(temp <= -100)
 		{
-			// under -10.0 deg C; ommit dot
+			// under -10.0 deg C; dont show dot
 			sprintf_P(buf, PSTR("-%d"), (-temp + 5) / 10);
 		}
 		else if(temp < 0)
@@ -1341,7 +1341,6 @@ protected:
 		sprintf_P(buf + strlen(buf),
 			PSTR("℃ %4dh %2d%%"), bme280_result.pressure, bme280_result.humidity);
 		fb().draw_text(0, 28, 255, buf, font_4x5);
-#endif
 
 		// draw marquee
 		if(font_ft.get_available())
