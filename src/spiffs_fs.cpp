@@ -92,7 +92,8 @@ bool ANY_SPIFFSFS::begin(bool formatOnFail, const char *label, const char * base
  
     size_t total,used;
     if(ESP_OK == esp_spiffs_info(label, &total, &used)){
-        printf("Label:%s  Total:%ld  Used:%ld\r\n", p_label, (long)total, (long)used);
+        printf("Label:%s  Total:%ld  Used:%ld  Mount point:%s\r\n", p_label, (long)total, (long)used,
+            basePath);
     }
 
     return true;

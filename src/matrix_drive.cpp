@@ -158,11 +158,11 @@ static void led_post()
 
 	if(error)
 	{
-		puts("Error found");
+		puts("Error found.");
 	}
 	else
 	{
-		puts("No error found");
+		puts("No error found.");
 	}
 
 }
