@@ -292,6 +292,7 @@ int16_t ambient_to_brightness(int16_t ambient)
 static int16_t last_read_ambient;
 static uint32_t freeze_ambient_until;
 static bool ambient_freezing;
+static bool ambient_ledtest_max_brightness; // always full brightness for led test
 static int16_t read_ambient()
 {
 	// the ambient raw value at my development desk is:
@@ -364,12 +365,19 @@ void poll_ambient()
 
     EVERY_MS(200)
     {
-		int16_t ambient = read_ambient();
-		int index = ambient_to_brightness(ambient);
-		matrix_drive_set_current_gain(index);
-        // map brightness index to 10 ... 256
-        int v = (256 - 10) * index / LED_CURRENT_GAIN_MAX + 10;
-        status_led_set_global_brightness(v);
+        if(!ambient_ledtest_max_brightness)
+        {
+            int16_t ambient = read_ambient();
+            int index = ambient_to_brightness(ambient);
+            matrix_drive_set_current_gain(index);
+            // map brightness index to 10 ... 256
+            int v = (256 - 10) * index / LED_CURRENT_GAIN_MAX + 10;
+            status_led_set_global_brightness(v);
+        }
+        else
+        {
+            matrix_drive_set_current_gain(LED_CURRENT_GAIN_MAX);
+        }
     }
     END_EVERY_MS
 
@@ -392,7 +400,7 @@ void freeze_ambient()
 
 void sensors_set_contrast_always_max(bool b)
 {
-	// TODO: implement this
+    ambient_ledtest_max_brightness = b;
 }
 
 void sensors_change_current_contrast(int amount)
