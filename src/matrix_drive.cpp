@@ -222,7 +222,6 @@ static volatile lldesc_t *dmaDesc;
 #define MAX_DMA_ITEM_COUNT 1024
 
 
-
 static void init_dma() {
 	// enable the peripheral
 	periph_module_enable(PERIPH_I2S1_MODULE);
@@ -393,7 +392,7 @@ static constexpr uint16_t gamma_255_to_4095(int in)
   	(uint16_t) (pow(
 		  	(float)((in+5.0f) / (255.0f+5.0f)),
 			(float)2.2)
-				* 3800)));  
+				* 3900)));  
 }
 
 #define G4(N) gamma_255_to_4095((N)), gamma_255_to_4095((N)+1), \
@@ -445,17 +444,12 @@ time frame:
 
 1104 clocks           :    dummy
 
- -- 2048 + 1616 clock boundary
+ -- 2048 + 2048-128-24 clock boundary
 
-24  clocks            :    All LEDs off for HC(T)595
-16*8 = 128 clocks     :    All LEDs off
+
 24  clocks            :    Next row data for HC(T)595
 16*8 = 128 clocks     :    HC(T)595 latch + 
                            Pixel brightness data(15) + global latch for next line 
-16*8 = 128 clocks     :    All LED on
-
-
-	The last 256 clocks in a time frame are dead clocks; all leds are off at this period.
 
 */
 
@@ -468,7 +462,7 @@ static int IRAM_ATTR build_brightness(buf_t *buf, int row, int n)
 		int x = i * 8 + (n >> 1);
 		int y = (row << 1) + (n & 1);
 
-		uint16_t br = /*(x%48)==y ? 0xaaa: 0;// */gamma_table[array[y][x]];
+		uint16_t br = gamma_table[array[y][x]];
 
 		buf[ 0] = (br & (1<<15)) ? B_COLSER : 0;
 		buf[ 1] = (br & (1<<14)) ? B_COLSER : 0;
@@ -515,44 +509,6 @@ static int IRAM_ATTR build_brightness(buf_t *buf, int row, int n)
 	return NUM_LED1642 * 16;
 } 
 
-
-// build resister for resister no. 2
-static int IRAM_ATTR build_set_led1642_reg_2(buf_t *buf, uint16_t val)
-{
-//	return build_set_led1642_reg(buf, 2, val);
-
-	for(int i = 0; i < NUM_LED1642; ++i)
-	{
-		buf[ 0] = (val & (1<<15)) ? B_COLSER : 0;
-		buf[ 1] = (val & (1<<14)) ? B_COLSER : 0;
-		buf[ 2] = (val & (1<<13)) ? B_COLSER : 0;
-		buf[ 3] = (val & (1<<12)) ? B_COLSER : 0;
-		buf[ 4] = (val & (1<<11)) ? B_COLSER : 0;
-		buf[ 5] = (val & (1<<10)) ? B_COLSER : 0;
-		buf[ 6] = (val & (1<< 9)) ? B_COLSER : 0;
-		buf[ 7] = (val & (1<< 8)) ? B_COLSER : 0;
-		buf[ 8] = (val & (1<< 7)) ? B_COLSER : 0;
-		buf[ 9] = (val & (1<< 6)) ? B_COLSER : 0;
-		buf[10] = (val & (1<< 5)) ? B_COLSER : 0;
-		buf[11] = (val & (1<< 4)) ? B_COLSER : 0;
-		buf[12] = (val & (1<< 3)) ? B_COLSER : 0;
-		buf[13] = (val & (1<< 2)) ? B_COLSER : 0;
-		if(i == (NUM_LED1642 -1))
-		{
-			buf[14] = (val & (1<< 1)) ? (B_COLSER|B_COLLATCH) : B_COLLATCH;
-			buf[15] = (val & (1<< 0)) ? (B_COLSER|B_COLLATCH) : B_COLLATCH;
-		}
-		else
-		{
-			buf[14] = (val & (1<< 1)) ? B_COLSER : 0;
-			buf[15] = (val & (1<< 0)) ? B_COLSER : 0;
-		}
-		buf += 16;
-	}
-
-	return NUM_LED1642 * 16;
-
-}
 
 // build resister for resister no. 7
 static int IRAM_ATTR build_set_led1642_reg_7(buf_t *buf, uint16_t val)
@@ -627,6 +583,9 @@ void IRAM_ATTR build_first_half()
 		*(bufp++)  = 0;
 	}
 
+	// ROW LATCH
+	buf[0] |= B_ROWLATCH; // let HCT595 latch the buffer
+
 	// word order shuffle
 	shuffle_bytes(buf, 2048);
 }
@@ -635,9 +594,7 @@ void IRAM_ATTR build_first_half()
 
 void IRAM_ATTR build_second_half()
 {
-
 	buf_t *bufp = buf + 2048;
-	buf_t *tmpp;
 
 	for(int n = HALF_BUILD_BOUNDARY+1; n <= 14; ++n)
 	{
@@ -646,22 +603,13 @@ void IRAM_ATTR build_second_half()
 
 	bufp += build_set_led1642_reg_7(bufp, led_config); // build LED1642 config word
 
-	while(bufp < buf + (2048 + 1616))
+	while(bufp < buf + (2048 + (2048-128-24)))
 	{
 		// dummy clock
 		*(bufp++)  = 0;
 	}
 
-	// all LED off
-	for(int i = 0; i < 24; ++ i)
-	{
-		*(bufp++) = B_COLSER;
-	}
-
-	bufp += build_set_led1642_reg_2(bufp, 0x0000); // full LEDs off
-
 	// row select
-	tmpp = bufp; // remember current position 
 	for(int i = 0; i < 24; ++ i)
 	{
 		buf_t t = 0;
@@ -669,21 +617,10 @@ void IRAM_ATTR build_second_half()
 		*(bufp++) = t;
 	}
 
-	tmpp[0] |= B_ROWLATCH; // let HCT595 latch the buffer with '1' (clear all LED)
-	tmpp[1] |= B_ROWLATCH; // To make sure, let latch pulse reasonably long
-	tmpp[2] |= B_ROWLATCH; // To make sure, let latch pulse reasonably long
-	tmpp[3] |= B_ROWLATCH; // To make sure, let latch pulse reasonably long
 
 	bufp += build_brightness(bufp, r, 15); // global latch of brightness data
 
-	tmpp = bufp; // remember current position
-
-	bufp += build_set_led1642_reg_2(bufp, 0xffff); // full LEDs on
-
-	tmpp[0] |= B_ROWLATCH; // let HCT595 latch the buffer
-	tmpp[1] |= B_ROWLATCH; // To make sure, let latch pulse reasonably long
-	tmpp[2] |= B_ROWLATCH; // To make sure, let latch pulse reasonably long
-	tmpp[3] |= B_ROWLATCH; // To make sure, let latch pulse reasonably long
+	// HC595 is latched at first of build_first_half()
 
 	// word order shuffle
 	shuffle_bytes(buf + 2048, 2048);
@@ -768,7 +705,7 @@ void matrix_drive_early_setup()
 	// so we must set SDO delay one by one from the first LED1642 on the chain
 	// to make all LED1642s have proper configuration.
 	led_config = 0;
-	led_config += (1<<13) | (1<<14);  // enable SDO delay and progressive delay
+	led_config += (1<<13) ;  // enable SDO delay and progressive delay
 	led_config += (1<<11) | (1<<12) |(1<<15); // Output turn-on/off time: on:180ns, off:150ns
 	led_config += 0b111111 | (1<<6); // set current gain
 	for(int i = 0; i <NUM_LED1642 * 4; ++i)
@@ -805,6 +742,7 @@ void matrix_drive_setup() {
 	// send dummy clocks to LED1642, to set internal PWM counter as ZERO
 	// note that PWM counter overflows at 4096 and becomes zero.
 	clock = 4096 - clock % 4096;
+	clock += 4096 - 15; // -15 = required for PWM start offset adjustment
 	for(int i = 0; i < clock; ++i)
 	{
 		digitalWrite(IO_COLCLK, 1);
