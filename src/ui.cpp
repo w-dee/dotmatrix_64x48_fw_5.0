@@ -351,6 +351,7 @@ class screen_led_test_t : public screen_base_t
 	
 	int x = -1;
 	int y = -1;
+	bool initial = true;
 
 public:
 	screen_led_test_t()
@@ -367,6 +368,8 @@ protected:
 
 	void on_button(uint32_t button) override
 	{
+		if(initial) return; // ignore button input before once all buttons get released
+
 		switch(button)
 		{
 		case BUTTON_OK:
@@ -402,6 +405,15 @@ protected:
 			return;
 		}
 
+	}
+
+	void on_idle_10() override
+	{
+		if(initial)
+		{
+			// wait for all buttons get released
+			if(!button_get_scan_bits()) initial = false;
+		}
 	}
 };
 
