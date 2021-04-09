@@ -34,7 +34,7 @@ static const uint8_t * ensure_access(uint32_t address)
 
     // not in current address space
     // remap
-    if(mmap_handle) spi_flash_munmap(mmap_handle); mmap_handle = 0;
+    if(mmap_handle) { spi_flash_munmap(mmap_handle); mmap_handle = 0; }
 
     mapped_start_address_in_data = address / 65536 * 65536;
 
