@@ -148,6 +148,7 @@ void ft_font_t::_begin()
     if(error)
     {
         printf("TrueType open failed: %d\n", (int)error);
+        spi_flash_munmap(map_handle);
         return;
     }
 
@@ -162,6 +163,7 @@ void ft_font_t::_begin()
         // no way 
         printf("font_ft: FT_Set_Pixel_Sizes failed.\n");
         FT_Done_Face(face);
+        spi_flash_munmap(map_handle);
         face = nullptr;
     }
 

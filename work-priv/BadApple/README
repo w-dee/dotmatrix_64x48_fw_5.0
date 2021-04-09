@@ -1,0 +1,4 @@
+1. Put movie on this directory named "TouhouBadApplePV_480p.mp4"
+2. Run "make" at this directory
+3. Run "pio run -t uploadba" at project root directory
+4. Boot MZ5 while pressing UP button, then fun.

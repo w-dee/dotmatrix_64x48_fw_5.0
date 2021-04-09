@@ -21,6 +21,8 @@
 #include "fonts/font_ft.h"
 #include "fonts/font_aa.h"
 
+#include "bad_apple.h"
+
 class screen_clock_t;
 
 static screen_clock_t *screen_clock; // base clock instance
@@ -412,7 +414,11 @@ protected:
 		if(initial)
 		{
 			// wait for all buttons get released
-			if(!button_get_scan_bits()) initial = false;
+			if(!button_get_scan_bits())
+			{
+				if(!bad_apple()) // unless bad_apple is running...
+					initial = false;
+			}
 		}
 	}
 };
@@ -1413,10 +1419,10 @@ void ui_setup()
 
 	screen_clock = new screen_clock_t();
 
-	if(button_get_scan_bits() & BUTTON_UP)
+//	if(button_get_scan_bits() & BUTTON_UP)
 		screen_manager.push(new screen_led_test_t());
-	else
-		screen_manager.push(screen_clock);
+//	else
+//		screen_manager.push(screen_clock);
 }
 
 void ui_process()
