@@ -103,8 +103,6 @@ bool bad_apple()
     // initialize bad_apple
     if(running) return true;
 
-	sensors_set_contrast_always_max(false);
-
     // find data start address
     const esp_partition_t * part =
         esp_partition_find_first((esp_partition_type_t)0x40,
@@ -149,6 +147,8 @@ bool bad_apple()
     running = true;
 
     xTaskCreatePinnedToCore(decode_task, "BadApple decoder", 4096, NULL, 1, NULL, 0);
+
+	sensors_set_contrast_always_max(false);
 
     return true;
 }
