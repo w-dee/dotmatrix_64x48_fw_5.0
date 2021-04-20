@@ -2,6 +2,7 @@
 #include "bme280.h"
 #include "interval.h"
 #include "mz_bme.h"
+#include "pendulum.h"
 
 static BME280 bme280;
 void init_bme280()
@@ -24,5 +25,9 @@ bme280_result_t bme280_result;
 
 void poll_bme280()
 {
-    poll();
+    EVERY_MS(500)
+    {
+        poll();
+    }
+    END_EVERY_MS
 }
