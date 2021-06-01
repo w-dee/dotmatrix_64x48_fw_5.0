@@ -40,7 +40,7 @@ class metrics_cache_t
     // cache entry item
     struct entry_t
     {
-        uint8_t exist; // existence
+        bool exist; // existence
         int8_t adv_x; // step x
         int8_t adv_y; // step y
         int8_t left; // bitmap left
