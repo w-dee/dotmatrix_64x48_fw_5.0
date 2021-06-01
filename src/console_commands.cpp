@@ -14,6 +14,7 @@
 #include "mz_version.h"
 
 
+
 // wait for maximum 20ms, checking key type, returning
 // whether any key has pressed(-1 = no keys pressed)
 static int any_key_pressed()
@@ -35,7 +36,15 @@ static int any_key_pressed()
     return -1;
 }
 
-
+// wait for maximum 100ms, consuming any typed keys.
+// this will discard escape sequence garbage or EOL garbade.
+static void consume_key_garbage()
+{
+    for(int i = 0; i < 5; )
+    {
+        if(any_key_pressed() == -1) ++i;
+    }
+}
 
 
 // command handlers --------------------------------------------------
@@ -359,6 +368,7 @@ namespace cmd_wifi_wps
             }) ;       
 
             printf("WPS started. Type any key to stop WPS now.\n");
+            consume_key_garbage();
 
             // check WPS status
             int last_status;
@@ -513,6 +523,7 @@ namespace cmd_rmt
             }
             snprintf(numstr, sizeof(numstr), "%02d", num->ival[0]);
 
+            consume_key_garbage();
             if(!recv->count)
             {
                 // send mode
@@ -667,6 +678,9 @@ namespace cmd_keys
                 "  B/Z         :  CANCEL\n"
                 "  Q/ESC       :  Quit this mode\n"
             );
+
+            consume_key_garbage();
+
             for(;;)
             {
                 int ch = getchar();
