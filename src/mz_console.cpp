@@ -167,7 +167,8 @@ void console_probe()
 	    "Your terminal application does not support escape sequences.\n"
 	    "Line editing and history features are disabled.\n"
 	    "On linux , try screen.\n"
-	    "On Windows, try using Putty instead.\n");
+	    "On Windows, try using Putty instead.\n"
+		"If you are using PlatformIO monitor, try an option \"--eol LF\" to avoid newline problems.\n");
           linenoiseSetDumbMode(1);
 		dumb_mode = true;
   	}
