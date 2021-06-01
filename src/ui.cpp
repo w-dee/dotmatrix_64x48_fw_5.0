@@ -1217,9 +1217,10 @@ protected:
 
 	void on_idle_50() override
 	{
-		if (first)
+		if (first && !wps_started)
 		{
 			first = false;
+			printf("Starting WPS...\n");
 			wifi_wps(); // this function will return before WPS process ends
 			wps_started = true;
 		}
