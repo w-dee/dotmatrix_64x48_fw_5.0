@@ -26,6 +26,7 @@ extern "C" {
 
 #include "spiffs_fs.h"
 #include "mz_update.h"
+#include "web_server.h"
 
 using namespace fs;
 
@@ -117,7 +118,13 @@ ANY_SPIFFSFS FS; // global instance
 void init_fs()
 {
    	puts("Main SPIFFS initializing ...");
-    ::FS.begin(true, (get_current_active_partition_number()==1) ? "spiffs1" : "spiffs0");
+    if(!
+    ::FS.begin(true, (get_current_active_partition_number()==1) ? "spiffs1" : "spiffs0"))
+    {
+        // main SPIFFS mount failed! go in recovery mode
+        printf("Main SPIFFS mount failed. Going to system recovery mode ...\n");
+        set_system_recovery_mode();
+    }
     // see custom.csv for the partition label.
 }
 

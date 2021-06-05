@@ -54,7 +54,8 @@ void setup() {
   show_ota_status();
   status_led_setup();
   matrix_drive_setup();
-  init_fs();
+  init_fs(); // in init_fs(), if main SPIFFS mount fails, set_system_recovery_mode() issues.
+
 
   // before init_settings, check cancel buttion be pressed over 1sec
   delay(100); // wait for matrix row drive cycles several times
@@ -89,7 +90,6 @@ void setup() {
     fflush(stdout);
     clear_settings();
   }
-
 
   init_settings();
   wifi_setup();

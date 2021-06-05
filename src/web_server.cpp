@@ -2,12 +2,23 @@
 #include <StreamString.h>
 #include "spiffs_fs.h"
 #include "mz_update.h"
+#include "settings.h"
+#include "calendar.h"
+#include "ui.h"
+#include "mz_version.h"
 
 
+// The web server
 static WebServer server(80);
 
-
+static const String user_name = "admin";
+static String password = "admin"; // password for the UI
+static bool in_recovery = false; // whether the system is in recovery mode
  
+void set_system_recovery_mode() {
+	in_recovery = true;
+}
+
 static String updateIndex = // TODO: Error handling
 "<script src='https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js'></script>"
 "<form method='POST' action='#' enctype='multipart/form-data' id='upload_form'>"
@@ -47,17 +58,14 @@ static String updateIndex = // TODO: Error handling
 
 static bool send_common_header()
 {
-	/*
 	if(!in_recovery)
 	{
-		if(!server.authenticate(user_name, password.c_str()))
+		if(!server.authenticate(user_name.c_str(), password.c_str()))
 		{
 			server.requestAuthentication();
 			return false;
 		}
 	}
-	return true;
-	*/
 	return true;
 }
 
@@ -102,7 +110,8 @@ static bool loadFromFS(String path){
 static void handleNotFound()
 {
 	if(!send_common_header()) return;
-	if(loadFromFS(server.uri())) return;
+
+	if(!in_recovery && loadFromFS(server.uri())) return;
 
 	if(server.uri() == "/")
 	{
@@ -127,6 +136,11 @@ static void handleNotFound()
 	Serial.print(message);
 	server.send(404, F("text/plain"), message);
 
+}
+
+static void send_json_ok()
+{
+	server.send(200, F("application/json"), F("{\"result\":\"ok\"}"));
 }
 
 static void string_json(const String &s, Stream & st)
@@ -156,10 +170,11 @@ static void web_server_export_json_for_ui(bool js)
 	StreamString st;
 	if(js) st.print(F("window.settings="));
 	st.print(F("{\"result\":\"ok\",\"values\":{\n"));
-/*
+
 	string_vector v;
 
-	v = calendar_get_ntp_server();
+	String tz;
+	get_tz(v, tz);
 	st.print(F("\"cal_ntp_servers\":[\n"));
 	string_json(v[0], st); st.print((char)',');
 	string_json(v[1], st); st.print((char)',');
@@ -167,7 +182,7 @@ static void web_server_export_json_for_ui(bool js)
 
 	st.print(F(",\n"));
 	st.print(F("\"cal_timezone\":"));
-	st.printf_P(PSTR("%d"), calendar_get_timezone());
+	string_json(tz, st);
 
 	st.print(F(",\n"));
 	st.print(F("\"admin_pass\":"));
@@ -180,24 +195,9 @@ static void web_server_export_json_for_ui(bool js)
 	st.print(F(",\n"));
 	st.print(F("\"version_info\":{"));
 
-	st.print(F("\"date\":"));
-	string_json(_BuildInfo.date, st);
-	st.print(F(",\n"));
-
-	st.print(F("\"time\":"));
-	string_json(_BuildInfo.time, st);
-	st.print(F(",\n"));
-
-	st.print(F("\"src_version\":"));
-	string_json(_BuildInfo.src_version, st);
-	st.print(F(",\n"));
-
-	st.print(F("\"env_version\":"));
-	string_json(_BuildInfo.env_version, st);
-
+	st.print(version_get_info_string());
 	st.print(F("}\n"));
 
-*/
 	st.print(F("}}\n"));
 	if(js) st.print((char)';');
 
@@ -207,11 +207,31 @@ static void web_server_export_json_for_ui(bool js)
 		server.send(200, F("application/json"), st);
 }
 
+static void web_server_handle_admin_pass()
+{
+	if(!send_common_header()) return;
+	password = server.arg(F("admin_pass"));
+	settings_write(F("web_password"), password);
+
+	send_json_ok();
+}
+
+static void web_server_handle_calendar()
+{
+	if(!send_common_header()) return;
+	string_vector vec {server.arg(F("ntp1")), server.arg(F("ntp2")), server.arg(F("ntp3"))};
+	String tz = server.arg(F("tz"));
+	set_tz(vec, tz);
+}
+
 void web_server_setup()
 {
+	// load web user interface settings
+	settings_write(F("web_password"), password, SETTINGS_NO_OVERWRITE);
+	settings_read(F("web_password"), password);
+
 	// setup handlers
 
-	// TODO: recovery mode
 	server.onNotFound(handleNotFound);
 
 	server.on(F("/settings/settings.json"), HTTP_GET, []() {
@@ -222,6 +242,12 @@ void web_server_setup()
 			if(!send_common_header()) return;
 			web_server_export_json_for_ui(true);
 		});
+
+	server.on(F("/settings/admin_pass"), HTTP_POST,
+		&web_server_handle_admin_pass);
+
+	server.on(F("/settings/calendar"), HTTP_POST,
+		&web_server_handle_calendar);
 
 	server.on("/update", HTTP_GET, []() {
 		server.sendHeader("Connection", "close");
