@@ -183,11 +183,112 @@ const PROGMEM glyph_vw_t font_4x5_data[]= {
 	"        "_b,
 	"        "_b,
 	"        "_b,
+	} 
+},
+#define SHRINKED_DOT_IDX 18
+{ // '.'  - SHRINKED_DOT_IDX // shrinked width dot // must be taken with special care
+0, {
+	"        "_b,
+	"        "_b,
+	"        "_b,
+	"        "_b,
+	"@       "_b,
+	}
+},
+{ // N - 19
+4, {
+	"@  @    "_b,
+	"@@ @    "_b,
+	"@ @@    "_b,
+	"@  @    "_b,
+	"@  @    "_b,
+	}
+},
+{ // o - 20
+3, {
+	"        "_b,
+	" @      "_b,
+	"@ @     "_b,
+	"@ @     "_b,
+	" @      "_b,
+	}
+},
+{ // W - 21
+5, {
+	"@   @   "_b,
+	"@   @   "_b,
+	"@ @ @   "_b,
+	"@ @ @   "_b,
+	" @ @    "_b,
+	}
+},
+{ // i - 22
+1, {
+	"@       "_b,
+	"        "_b,
+	"@       "_b,
+	"@       "_b,
+	"@       "_b,
+	}
+},
+{ // F - 23
+3, {
+	"@@@     "_b,
+	"@       "_b,
+	"@@@     "_b,
+	"@       "_b,
+	"@       "_b,
+	}
+},
+{ // c - 24
+2, {
+	"        "_b,
+	" @      "_b,
+	"@       "_b,
+	"@       "_b,
+	" @      "_b,
+	}
+},
+{ // n - 25
+3, {
+	"        "_b,
+	"@@      "_b,
+	"@ @     "_b,
+	"@ @     "_b,
+	"@ @     "_b,
+	}
+},
+{ // n - 26
+3, {
+	"        "_b,
+	"@@@     "_b,
+	"@@@     "_b,
+	"@       "_b,
+	" @@     "_b,
+	}
+},
+{ // t - 27
+3, {
+	" @      "_b,
+	"@@@     "_b,
+	" @      "_b,
+	" @      "_b,
+	" @@     "_b,
+	}
+},
+{ // d - 28
+4, {
+	"   @    "_b,
+	"   @    "_b,
+	" @@@    "_b,
+	"@  @    "_b,
+	" @@@    "_b,
 	}
 },
 
 
-}; 
+
+};
 
 
 static int chr_to_index(int32_t chr)
@@ -203,6 +304,17 @@ static int chr_to_index(int32_t chr)
 	case '%': return 15;
 	case '-': return 16;
 	case '\'': return 17;
+	case '\x01': return SHRINKED_DOT_IDX; // shrinked width dot
+	case 'N': return 19;
+	case 'o': return 20;
+	case 'W': return 21;
+	case 'i': return 22;
+	case 'F': return 23;
+	case 'c': return 24;
+	case 'n': return 25;
+	case 'e': return 26;
+	case 't': return 27;
+	case 'd': return 28;
 	default:;
 	}
 	return -1;
@@ -224,23 +336,36 @@ void font_4x5_t::put(int32_t chr, int level, int x, int y, frame_buffer_t & fb) 
 	if(idx == -1) return; // not found
 	const glyph_vw_t *p = font_4x5_data + idx;
 
-	// clip font bounding box
-	int w = pgm_read_byte( & (p->width) );
-	int h = 5;
-	if(!fb.clip(fx, fy, x, y, w, h)) return;
-
-	// pixel loop
-	for(int yy = y; yy < h+y; ++yy, ++fy)
+	if(idx == SHRINKED_DOT_IDX)
 	{
-		unsigned char line = pgm_read_byte(p->bitmap + fy);
-//		printf("line %d: %02x\r\n", fy, line);
-		int fxx = fx;
-		for(int xx = x; xx < w+x; ++xx, ++fxx)
+		// shrinked dot
+		x -= 1;
+		y += 5;
+		int w = 1;
+		int h = 1;
+		if(!fb.clip(fx, fy, x, y, w, h)) return;
+		fb.set_point(x, y, level);
+	}
+	else
+	{
+		// clip font bounding box
+		int w = pgm_read_byte( & (p->width) );
+		int h = 5;
+		if(!fb.clip(fx, fy, x, y, w, h)) return;
+
+		// pixel loop
+		for(int yy = y; yy < h+y; ++yy, ++fy)
 		{
-			if(line & (1<<(7-fxx)))
+			unsigned char line = pgm_read_byte(p->bitmap + fy);
+	//		printf("line %d: %02x\r\n", fy, line);
+			int fxx = fx;
+			for(int xx = x; xx < w+x; ++xx, ++fxx)
 			{
-//				printf("%d %d %d %d \r\n", fxx, fy, xx, yy);
-				fb.set_point(xx, yy, level);
+				if(line & (1<<(7-fxx)))
+				{
+	//				printf("%d %d %d %d \r\n", fxx, fy, xx, yy);
+					fb.set_point(xx, yy, level);
+				}
 			}
 		}
 	}

@@ -1271,9 +1271,44 @@ public:
 																  F("DHCP Mode >"),
 															  })
 	{
+		// make room for IP address
+		title_line_y += 5;
+		list_start_y += 5;
+		--max_lines;
 	}
 
 protected:
+	bool draw() override
+	{
+		inherited::draw();
+		ip_addr_settings_t settings = wifi_get_ip_addr_settings(true);
+		const char *str;
+
+		if(settings.ip_addr == null_ip_addr)
+		{
+			str = "No WiFi connected";
+		}
+		else
+		{
+			/* convert dot to shrinked dot '\x01' */
+			char buf[16]; // maximum IPv4 address length = 15
+			const char * in = settings.ip_addr.c_str();
+			char * out = buf;
+			while(*in && out - buf < 15)
+			{
+				char c = *in;
+				*out = (c == '.' ? '\x01' : c);
+				++ out;
+				++ in;
+			}
+			*out = 0; // terminate
+			str = buf;
+		}
+
+		fb().draw_text(0, 12, 255, str, font_4x5);
+		return true;
+	}
+
 	void on_ok(int idx) override
 	{
 		switch (idx)
