@@ -224,6 +224,15 @@ static void web_server_handle_calendar()
 	set_tz(vec, tz);
 }
 
+static void web_server_handle_ui_marquee()
+{
+	if(!send_common_header()) return;
+	String m = server.arg(F("ui_marquee"));
+	ui_set_marquee(m);
+
+	send_json_ok();
+}
+
 void web_server_setup()
 {
 	// load web user interface settings
@@ -248,6 +257,9 @@ void web_server_setup()
 
 	server.on(F("/settings/calendar"), HTTP_POST,
 		&web_server_handle_calendar);
+
+	server.on(F("/settings/ui_marquee"), HTTP_POST,
+		&web_server_handle_ui_marquee);
 
 	server.on("/update", HTTP_GET, []() {
 		server.sendHeader("Connection", "close");
