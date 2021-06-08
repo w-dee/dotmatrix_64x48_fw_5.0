@@ -7,6 +7,14 @@
 #include "esp_wps.h"
 #include "calendar.h"
 
+static bool clear_wifi_setting = false;
+
+// set flag to clear wifi settings (for recovery from the panic)
+void wifi_set_clear_setting_flag()
+{
+	clear_wifi_setting = true;
+}
+
 
 ip_addr_settings_t::ip_addr_settings_t()
 {
@@ -219,6 +227,18 @@ void wifi_start()
 	IPAddress i_dns1;       i_dns1      .fromString(ip_addr_settings.dns1);
 	IPAddress i_dns2;       i_dns2      .fromString(ip_addr_settings.dns2);
 
+	if(i_ip_addr.toString() != null_ip_addr)
+	{
+		// if not in DHCP mode ...
+		if(i_ip_mask.toString() == null_ip_addr)
+		{
+			// if the network mask is null
+			// this will panic the wifi subsystem of ESP-IDF.
+			// set dummy network mask instead.
+			i_ip_mask.fromString("255.255.255.0");
+		}
+	}
+
 	WiFi.config(i_ip_addr, i_ip_gateway, i_ip_mask, i_dns1, i_dns2);
 }
 
@@ -227,13 +247,20 @@ void wifi_start()
  */
 static void wifi_init_settings()
 {
-	settings_write(F("ap_name"), F(""), SETTINGS_NO_OVERWRITE);
-	settings_write(F("ap_pass"), F(""), SETTINGS_NO_OVERWRITE);
-	settings_write(F("ip_addr"), F("0.0.0.0"), SETTINGS_NO_OVERWRITE); // automatic ip configuration
-	settings_write(F("ip_gateway"), F("0.0.0.0"), SETTINGS_NO_OVERWRITE);
-	settings_write(F("ip_mask"), F("0.0.0.0"), SETTINGS_NO_OVERWRITE);
-	settings_write(F("dns_1"), F("0.0.0.0"), SETTINGS_NO_OVERWRITE);
-	settings_write(F("dns_2"), F("0.0.0.0"), SETTINGS_NO_OVERWRITE);
+	settings_overwrite_t overwrite = SETTINGS_NO_OVERWRITE;
+	if(clear_wifi_setting)
+	{
+		puts("Clearing WiFi settings due to repeated boot failure.");
+		overwrite = SETTINGS_OVERWRITE;
+	}
+
+	settings_write(F("ap_name"), F(""), overwrite);
+	settings_write(F("ap_pass"), F(""), overwrite);
+	settings_write(F("ip_addr"), F("0.0.0.0"), overwrite); // automatic ip configuration
+	settings_write(F("ip_gateway"), F("0.0.0.0"), overwrite);
+	settings_write(F("ip_mask"), F("0.0.0.0"), overwrite);
+	settings_write(F("dns_1"), F("0.0.0.0"), overwrite);
+	settings_write(F("dns_2"), F("0.0.0.0"), overwrite);
 
 	settings_read(F("ap_name"), ap_name);
 	settings_read(F("ap_pass"), ap_pass);

@@ -17,6 +17,7 @@
 #include "mz_version.h"
 #include "pendulum.h"
 #include "fonts/font_ft.h"
+#include "panic.h"
 
 #define MY_CONFIG_ARDUINO_LOOP_STACK_SIZE 16384U
 extern TaskHandle_t loopTaskHandle; // defined in main.cpp of Arduino core
@@ -43,17 +44,24 @@ void setup() {
   }
 
   // put your setup code here, to run once:
+  init_console(); // this also initializes the serial output and stdio
+
   status_led_early_setup();
   matrix_drive_early_setup(); // blank all leds
 
   delay(1000);
 
-  init_console(); // this also initializes the serial output and stdio
+  panic_init();
+  panic_show_boot_count();
+  panic_check_repeated_boot();
   printf("\n\nGreetings. This is MZ5 firmware.\n");
   printf("%s\n", version_get_info_string().c_str());
   show_ota_status();
   status_led_setup();
+  panic_record_checkpoint(CP_MATRIX_CHECK);
   matrix_drive_setup();
+
+  panic_record_checkpoint(CP_SPIFFS_OPEN);
   init_fs(); // in init_fs(), if main SPIFFS mount fails, set_system_recovery_mode() issues.
 
 
@@ -91,7 +99,9 @@ void setup() {
     clear_settings();
   }
 
+  panic_record_checkpoint(CP_SETTINGS_OPEN);
   init_settings();
+
   wifi_setup();
   init_calendar(); // sntp initialization needs to be located after network stack initialization
   init_i2c();
@@ -101,6 +111,8 @@ void setup() {
   web_server_setup();
   ui_setup();
   begin_console();
+
+  panic_record_checkpoint(CP_WIFI_START);
   wifi_start();
 }
 
@@ -115,4 +127,5 @@ void loop() {
   web_server_handle_client();
   poll_pendulum();
   ui_process();
+  panic_notify_loop_is_running();
 }

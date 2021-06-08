@@ -3,15 +3,17 @@
 #include <WiFi.h>
 #include <limits.h>
 
+void wifi_set_clear_setting_flag();
+
 void wifi_setup();
 void wifi_check();
 void wifi_wps();
 WiFiEvent_t wifi_get_wps_status();
 void wifi_stop_wps();
 
-
 void wifi_start();
 void wifi_write_settings();
+
 
 struct ip_addr_settings_t
 {
