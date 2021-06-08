@@ -13,6 +13,7 @@ static const char *boot_cp_name = "boot_cp";
  __attribute__((noreturn)) void do_panic(panic_reason_t reason)
 {
     printf("---------PANIC--------\nReason code: %d\n", (int)reason);
+    panic_reset_boot_count(); // reset boot count to prevent infinite boot loop
     for(;;) ; // TODO: real panic indication
 }
 
@@ -86,7 +87,14 @@ boot_checkpoint_t panic_get_last_checkpoint()
 // check repeating boot
 void panic_check_repeated_boot()
 {
-    if(panic_increment_boot_count() >= BOOT_REPEAT_THRESH)
+    uint32_t boot_count = panic_increment_boot_count();
+    if(boot_count > BOOT_REPEAT_THRESH)
+    {
+        // counter overflow 
+        // ... WTF?
+        panic_reset_boot_count(); // reset boot count
+    }
+    else if(boot_count >= BOOT_REPEAT_THRESH)
     {
         // boot repeat threshold reached
         // what's happened?
