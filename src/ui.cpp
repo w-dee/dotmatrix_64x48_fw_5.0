@@ -1262,6 +1262,64 @@ protected:
 	}
 };
 
+class screen_light_off_threshold_editor_t : public screen_ascii_editor_t
+{
+public:
+	screen_light_off_threshold_editor_t() :
+		screen_ascii_editor_t(F("Light off threshold") ) 
+		{
+			String r;
+			settings_read("auto_light_off_threshold", r);
+			line = r;
+
+			char_list = { F("BS DEL"), F("56789"), F("01234") };
+		}
+
+protected:
+	bool validate(const String &line) override
+	{
+		return line.toInt() < 1023;
+	}
+
+	void on_ok(const String & line) override
+	{
+		settings_write(F("auto_light_off_threshold"), line);
+		screen_manager.pop();
+	} 
+
+	void on_cancel() override
+	{
+		screen_manager.pop();
+	}
+};
+
+class screen_other_setting_t : public screen_menu_t
+{
+public:
+	screen_other_setting_t() : screen_menu_t( 
+		F("Settings"), {
+			F("Light off threshold"),
+		} )
+	{
+		set_h_scroll(true);
+	}
+
+protected:
+	void on_ok(int idx) override
+	{
+		switch(idx)
+		{
+		case 0: // Light off threshold
+			screen_manager.push(new screen_light_off_threshold_editor_t());
+			break;
+		}
+	}
+
+	void on_cancel() override
+	{
+		screen_manager.pop();
+	}
+};
 
 
 //! main clock ui
@@ -1300,8 +1358,7 @@ private:
 		if(marquee_x >= marquee_len) marquee_x = 0;
 	}
 
-protected:
-	bool draw() override
+	void _draw_clock()
 	{
 		struct tm tm;
 		time_t timeval;
@@ -1367,6 +1424,28 @@ protected:
 			if(marquee_len > LED_MAX_LOGICAL_COL)
 				fb().draw_text(-marquee_x + marquee_len, 35, 255, marquee, font_ft);
 		}
+
+	}
+
+	void _draw_blank()
+	{
+		get_current_frame_buffer().fill(0x00);
+	}
+
+protected:
+	bool draw() override
+	{
+		String r;
+		bool result;
+		result = settings_read("auto_light_off_threshold", r);
+		if (!result || get_ambient() > r.toInt())
+		{
+			_draw_clock();
+		}
+		else
+		{
+			_draw_blank();
+		}
 		return true;
 	}
 
@@ -1387,6 +1466,10 @@ protected:
 		case BUTTON_DOWN:
 			// down button; decrease contrast
 			sensors_change_current_contrast(-1);
+			return;
+
+		case BUTTON_LEFT:
+			screen_manager.push(new screen_other_setting_t());
 			return;
 		}
 	}
