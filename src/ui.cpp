@@ -1276,6 +1276,18 @@ public:
 		}
 
 protected:
+	bool draw() override
+	{
+		screen_ascii_editor_t::draw();
+
+		int16_t ambient = get_ambient();
+		char buf[16];
+		sprintf_P(buf, PSTR("now:%4d"), ambient);
+		fb().draw_text(0, 35, 255, buf, font_5x5);
+
+		return true;
+	}
+
 	bool validate(const String &line) override
 	{
 		return line.toInt() < 1023;
