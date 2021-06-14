@@ -1376,6 +1376,8 @@ class screen_clock_t : public screen_base_t
 	int marquee_x = 0;	 //!< marquee displaying x
 	int count = 0;
 	uint32_t off_indication_start = 0; // !< start tick for "OFF" indication
+	static constexpr uint32_t OFF_INDICATION_TIME = 2000; // time span to display "OFF" message
+	static constexpr uint32_t OFF_FADE_TIME = 1000; // time span to fade out "OFF" message
 
 public:
 	screen_clock_t()
@@ -1499,18 +1501,30 @@ protected:
 		{
 			// blank display
 			// display "OFF" at screen center about two seconds
-#define OFF_INDICATION_TIME 2000
-			if((int32_t)(millis() - off_indication_start) < OFF_INDICATION_TIME)
+			uint32_t current = millis();
+			bool show = false;
+			int level = 255;
+			if((int32_t)(current - off_indication_start) < OFF_INDICATION_TIME)
 			{
 				// display "OFF"
-				fb().draw_text(26, 20, 255, "OFF", font_5x5);
+				show = true;
+			}
+			else if((int32_t)(current - off_indication_start) < OFF_INDICATION_TIME + OFF_FADE_TIME)
+			{
+				// fade out OFF string
+				int tim = (int32_t)(current - off_indication_start - OFF_INDICATION_TIME);
+				tim *= 255;
+				tim /= OFF_FADE_TIME;
+				level = 255 - tim;
+				show = true;
 			}
 			else
 			{
 				// display true blank screen
-				off_indication_start = millis() - OFF_INDICATION_TIME - 1;
+				off_indication_start = current - OFF_INDICATION_TIME - OFF_FADE_TIME - 1;
 			}
 
+			if(show) fb().draw_text(26, 20, level, "OFF", font_5x5);
 		}
 		return true;
 	}
