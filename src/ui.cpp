@@ -159,7 +159,7 @@ public:
 		if(new_top != old_top)
 		{
 			if(old_top) old_top->on_deactivate();
-			if(new_top) new_top->on_deactivate();
+			if(new_top) new_top->on_activate();
 		}
 	}
 
