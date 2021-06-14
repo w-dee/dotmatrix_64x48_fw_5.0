@@ -47,7 +47,7 @@ static constexpr int16_t AMBIENT_MAX = 1024;
 static constexpr int16_t BRIGHTNESS_MAX = 256;
 static constexpr int16_t DEFAULT_BRIGHTNESS = LED_CURRENT_GAIN_MAX / 2;
 static constexpr int16_t INVALID_AMBIENT = -1;
-static constexpr int16_t AMBIENT_MARGIN = 64;
+static constexpr int16_t AMBIENT_MARGIN = 70;
 
 struct setpoint_t
 {
@@ -329,7 +329,7 @@ static int16_t read_ambient()
 	// IL = (Vce - 0.785708299365338) / -7618.98956960328 
 	static int32_t lpf_value;
 	int32_t raw = _read_ambient() << 8; // '<<8' to increase integer arithmetic precision
-	lpf_value += (raw - lpf_value) >> 3;
+	lpf_value += (raw - lpf_value) >> 4;
 
 	if(!ambient_freezing)
 	{
@@ -370,6 +370,9 @@ void poll_ambient()
             int16_t ambient = read_ambient();
             int index = ambient_to_brightness(ambient);
             matrix_drive_set_current_gain(index);
+
+            // index 0 is a special value which blanks the main clock display;
+            // but do not blank the status LEDs at even lowest brightness.
             // map brightness index to 10 ... 256
             int v = (256 - 10) * index / LED_CURRENT_GAIN_MAX + 10;
             status_led_set_global_brightness(v);

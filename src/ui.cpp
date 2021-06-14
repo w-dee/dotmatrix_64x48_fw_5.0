@@ -63,6 +63,12 @@ protected:
 	//! blocking function (like network, filesystem, serial)
 	virtual bool draw() { return false; }
 
+	//! Called when the screen is activated (start accepting key events)
+	virtual void on_activate() { ; }
+	
+	//! Called when the screen is deactivated (another screen starts accepting key events)
+	virtual void on_deactivate() { ; }
+
 	//! Call this when the screen content is written and need to be showed
 	void show(transition_t transition = t_none);
 
@@ -128,12 +134,17 @@ public:
 
 	void push(screen_base_t *screen)
 	{
+		if(stack.size()) stack[stack.size()-1]->on_deactivate();			
 		stack.push_back(screen);
+		screen->on_activate();
 		stack_changed = true;
 	}
 
 	void close(screen_base_t *screen)
 	{
+		screen_base_t *old_top = nullptr;
+		if(stack.size()) old_top = stack[stack.size()-1];
+
 		std::vector<screen_base_t *>::iterator it =
 			std::find(stack.begin(), stack.end(), screen);
 		if (it != stack.end())
@@ -141,14 +152,25 @@ public:
 			stack.erase(it);
 			stack_changed = true;
 		}
+
+		screen_base_t *new_top = nullptr;
+		if(stack.size()) new_top = stack[stack.size()-1];
+
+		if(new_top != old_top)
+		{
+			if(old_top) old_top->on_deactivate();
+			if(new_top) new_top->on_deactivate();
+		}
 	}
 
 	void pop()
 	{
 		if (stack.size())
 		{
+			stack[stack.size() - 1]->on_deactivate();
 			delete stack[stack.size() - 1];
 			stack.pop_back();
+			if(stack.size()) stack[stack.size()-1]->on_activate();
 			stack_changed = true;
 		}
 	}
@@ -1353,6 +1375,7 @@ class screen_clock_t : public screen_base_t
 	int marquee_len = 0; //!< marquee width
 	int marquee_x = 0;	 //!< marquee displaying x
 	int count = 0;
+	uint32_t off_indication_start = 0; // !< start tick for "OFF" indication
 
 public:
 	screen_clock_t()
@@ -1384,8 +1407,7 @@ private:
 			marquee_x = 0;
 	}
 
-protected:
-	bool draw() override
+	void draw_clock()
 	{
 		struct tm tm;
 		time_t timeval;
@@ -1454,6 +1476,41 @@ protected:
 			fb().draw_text(-marquee_x, 35, 255, marquee, font_ft);
 			if (marquee_len > LED_MAX_LOGICAL_COL)
 				fb().draw_text(-marquee_x + marquee_len, 35, 255, marquee, font_ft);
+		}
+
+	}
+
+protected:
+	void on_activate() override
+	{
+		off_indication_start = millis();
+	}
+
+	bool draw() override
+	{
+		int index = matrix_drive_get_current_gain(); // get current brightness index
+		if(index != 0)
+		{
+			// normal display
+			draw_clock();
+			off_indication_start = millis();
+		}
+		else
+		{
+			// blank display
+			// display "OFF" at screen center about two seconds
+#define OFF_INDICATION_TIME 2000
+			if((int32_t)(millis() - off_indication_start) < OFF_INDICATION_TIME)
+			{
+				// display "OFF"
+				fb().draw_text(26, 20, 255, "OFF", font_5x5);
+			}
+			else
+			{
+				// display true blank screen
+				off_indication_start = millis() - OFF_INDICATION_TIME - 1;
+			}
+
 		}
 		return true;
 	}
