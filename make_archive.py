@@ -66,7 +66,7 @@ def do_make_archive():
     outfn = f".pio/build/{pio_env_name}/mz5_firm.bin"
     out = open(outfn, "wb")
     out.write(b"MZ5 compressed archive\r\n\n\x1a")
-    compressed = zlib.compress(stream.getvalue(), 3)
+    compressed = zlib.compress(stream.getvalue(), 9)
     out.write(struct.pack("<L", len(compressed)))
     out.write(compressed)
 
