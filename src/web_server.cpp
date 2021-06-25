@@ -268,9 +268,7 @@ void web_server_setup()
 
 	server.on("/update", HTTP_POST, []() {
 		server.sendHeader("Connection", "close");
-		server.send(200, "text/plain", /*(Update.hasError()) ? "FAIL" : */"OK");
-		// TODO: error handling
-
+		server.send(200, "text/plain",  Updater.get_last_status() == updater_t::stNoError ? "OK" : "FAIL");
 	  }, []() {
 		HTTPUpload& upload = server.upload();
 		if (upload.status == UPLOAD_FILE_START) {

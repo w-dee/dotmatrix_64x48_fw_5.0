@@ -187,9 +187,10 @@
 						pb.innerText = Math.floor(per * 100) + "%";
 					}
 				}, false);
-				xhr.upload.addEventListener('load', function(evt) {
-					pb.innerText = "Upload finished"; // TODO: Error handing
-				}, false);
+				xhr.onload = function(evt) {
+					debugger;
+					pb.innerText = "Upload finished : " + xhr.responseText;
+				};
 
 				var form = this.refs.form;
 				var data = new FormData(form);
