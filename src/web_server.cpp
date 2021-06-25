@@ -14,7 +14,10 @@ static WebServer server(80);
 static const String user_name = "admin";
 static String password = "admin"; // password for the UI
 static bool in_recovery = false; // whether the system is in recovery mode
- 
+
+static bool scheduled_reboot = false;
+static uint32_t scheduled_reboot_tick;
+
 void set_system_recovery_mode() {
 	in_recovery = true;
 }
@@ -284,7 +287,9 @@ void web_server_setup()
 
 			if(Updater.finish())
 			{
-				reboot(); // reboot 
+				// schedule a reboot
+				scheduled_reboot = true;
+				scheduled_reboot_tick = millis() + 2000; // after 2 sec, reboot.
 			}
 
 		}
@@ -300,4 +305,8 @@ void web_server_setup()
 void web_server_handle_client()
 {
 	server.handleClient();
+	if(scheduled_reboot && (int32_t)(millis() - scheduled_reboot_tick) > 0)
+	{
+		reboot(); // do scheduled reboot
+	}
 }
