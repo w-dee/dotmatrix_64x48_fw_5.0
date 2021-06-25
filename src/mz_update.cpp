@@ -501,7 +501,7 @@ void compressed_updater_t::write_data(const uint8_t *buf, size_t size)
     {
         // compressed data
         int status = inflator->eat(buf, size);
-        if(status <= TINFL_STATUS_DONE)
+        if(status <= TINFL_STATUS_DONE && status != TINFL_STATUS_DONE)
         {
             // decompression error
             printf("OTA: Compressed image corrupted. status: %i\n", status);
