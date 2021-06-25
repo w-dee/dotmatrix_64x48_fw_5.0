@@ -37,6 +37,7 @@ private:
 
 int get_current_active_partition_number();
 
+// update managemant class
 class updater_t
 {
     uint8_t *buffer;
@@ -69,7 +70,7 @@ public:
         stNoError,
         stCorrupted, // data corrupted
     };
-private:
+protected:
     status_t status;
     phase_t phase;
 
@@ -77,7 +78,7 @@ public:
     updater_t() {;}
 
     void begin();
-    void end(); // should be explicitly called because this method frees large(4kb) buffer
+    void end(); // should be explicitly called because this method frees large(over 4kB+32kB) buffer
 
 
 private:
@@ -88,16 +89,41 @@ public:
     bool finish(); // call this when all data is sent via write_data(); returns whether the update is succeeded or not
 };
 
+
+// infrator forward decl
+class mz_inflator_t;
+
+/**
+ * updater management class which consumes compressed firmware stream
+ * */
+class compressed_updater_t : public updater_t
+{
+    typedef updater_t inherited;
+
+    size_t total_received_bytes = 0; // total received bytes of compressed stream
+    uint32_t compressed_size = 0;
+    mz_inflator_t * inflator = nullptr;
+    uint8_t sz_buf[4]; // buffer for the size
+public:
+    /*override*/ void begin();
+    /*override*/ void end();
+
+    /*override*/ void write_data(const uint8_t * buf, size_t size); // write a block
+
+protected:
+    int write_data_trampoline(const uint8_t *buf, size_t size); 
+};
+
 /**
  * updater global instance
  * */
-extern updater_t Updater;
+extern compressed_updater_t Updater;
 
 
 /**
  * Show current OTA status
  * */
-void show_ota_status();
+void show_ota_boot_status();
 
 /**
  * Reboot and optionally clear settings

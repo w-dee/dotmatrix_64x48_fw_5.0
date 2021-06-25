@@ -56,7 +56,7 @@ void setup() {
   panic_check_repeated_boot();
   printf("\n\nGreetings. This is MZ5 firmware.\n");
   printf("%s\n", version_get_info_string().c_str());
-  show_ota_status();
+  show_ota_boot_status();
   status_led_setup();
   panic_record_checkpoint(CP_MATRIX_CHECK);
   matrix_drive_setup();

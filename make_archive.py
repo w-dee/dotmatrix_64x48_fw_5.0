@@ -4,6 +4,8 @@ import os
 import subprocess
 import hashlib
 import struct
+import zlib
+from io import BytesIO
 
 
 def bin_padding(bin, size):
@@ -28,12 +30,11 @@ def do_make_archive():
         print("Could not run pio command. Check the pio installation.\n")
         exit(3)
 
-    # open the target file
-    outfn = f".pio/build/{pio_env_name}/mz5_firm.bin"
-    out = open(outfn, "wb")
+    # open the binary memory stream
+    stream = BytesIO()
 
     # write archive header
-    out.write(bin_padding(b"MZ5 firmware archive 1.0\r\n\n\x1a    ", sector_size))
+    stream.write(bin_padding(b"MZ5 firmware archive 1.0\r\n\n\x1a    ", sector_size))
 
     # iterate into file list
     for file in files:
@@ -56,10 +57,18 @@ def do_make_archive():
         header = (b"-file boundary--" +
             struct.pack("<8sLL", label.encode('utf-8'), content_org_len, content_arc_len) +
             hash_bin)
-        out.write(bin_padding(header, sector_size))
+        stream.write(bin_padding(header, sector_size))
 
         # write content
-        out.write(bin_padding(content, sector_size))
+        stream.write(bin_padding(content, sector_size))
+
+    # compress and write the output file
+    outfn = f".pio/build/{pio_env_name}/mz5_firm.bin"
+    out = open(outfn, "wb")
+    out.write(b"MZ5 compressed archive\r\n\n\x1a")
+    compressed = zlib.compress(stream.getvalue(), 3)
+    out.write(struct.pack("<L", len(compressed)))
+    out.write(compressed)
 
     # done
     print(F"Made OTA archive at {outfn}\n")
