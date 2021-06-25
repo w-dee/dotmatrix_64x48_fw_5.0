@@ -110,8 +110,6 @@ public:
 
     /*override*/ void write_data(const uint8_t * buf, size_t size); // write a block
 
-protected:
-    int write_data_trampoline(const uint8_t *buf, size_t size); 
 };
 
 /**

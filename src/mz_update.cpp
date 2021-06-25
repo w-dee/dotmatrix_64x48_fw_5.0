@@ -490,7 +490,10 @@ void compressed_updater_t::write_data(const uint8_t *buf, size_t size)
         if (inflator)
             delete inflator, inflator = nullptr;
         using namespace std::placeholders;
-        mz_inflator_t::write_fn_t write_fn = std::bind(&compressed_updater_t::write_data_trampoline, this, _1, _2);
+        mz_inflator_t::write_fn_t write_fn = [this](const uint8_t *buf, size_t size) -> int {
+            inherited::write_data(buf, size);
+            return inherited::status == stNoError ? 0 : -1;
+        };
         inflator = new mz_inflator_t(write_fn, compressed_size);
     }
 
@@ -507,12 +510,6 @@ void compressed_updater_t::write_data(const uint8_t *buf, size_t size)
         }
         total_received_bytes += size;
     }
-}
-
-int compressed_updater_t::write_data_trampoline(const uint8_t *buf, size_t size)
-{
-    inherited::write_data(buf, size);
-    return inherited::status == stNoError ? 0 : -1;
 }
 
 compressed_updater_t Updater;
