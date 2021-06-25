@@ -497,7 +497,14 @@ void compressed_updater_t::write_data(const uint8_t *buf, size_t size)
     if (total_received_bytes >= mark_size + 4 && size)
     {
         // compressed data
-        inflator->eat(buf, size);
+        int status = inflator->eat(buf, size);
+        if(status <= TINFL_STATUS_DONE)
+        {
+            // decompression error
+            printf("OTA: Compressed image corrupted. status: %i\n", status);
+            status = stCorrupted;
+            return;
+        }
         total_received_bytes += size;
     }
 }
