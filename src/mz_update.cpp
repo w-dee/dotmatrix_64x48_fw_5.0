@@ -11,10 +11,6 @@ public:
     typedef std::function<int(const uint8_t *buf, size_t size)> write_fn_t;
 
 private:
-    uint8_t s_outbuf[TINFL_LZ_DICT_SIZE];
-
-    tinfl_decompressor inflator;
-
     size_t infile_remaining;
     const void *next_in;
     size_t avail_in = 0;
@@ -22,6 +18,8 @@ private:
     size_t avail_out = sizeof(s_outbuf);
     size_t total_in = 0, total_out = 0;
     write_fn_t write_fn;
+    tinfl_decompressor inflator;
+    uint8_t s_outbuf[TINFL_LZ_DICT_SIZE];
 
 public:
     mz_inflator_t(write_fn_t fn, size_t input_size)
@@ -42,10 +40,16 @@ public:
             if (!avail_in)
             {
                 // Input buffer is empty, so read more bytes from input file.
+                if(size == 0)
+                {
+                    return TINFL_STATUS_FAILED; // no more input; must be a logic error
+                }
                 size_t n = size < infile_remaining ? size : infile_remaining;
 
                 next_in = buf;
                 avail_in = n;
+                buf += n;
+                size -= n;
 
                 infile_remaining -= n;
             }
