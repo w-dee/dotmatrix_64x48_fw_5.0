@@ -132,6 +132,7 @@ bool partition_updater_t::write_sector(const uint8_t *buf)
         return false;
     } // already done
     uint8_t *bbuf = (uint8_t *)malloc(SPI_FLASH_SEC_SIZE);
+    uint8_t *rbuf = nullptr;
     if (!bbuf)
     {
         printf("OTA: Error: Memory exhausted.\n");
@@ -140,6 +141,8 @@ bool partition_updater_t::write_sector(const uint8_t *buf)
 
     memcpy(bbuf, buf, SPI_FLASH_SEC_SIZE);
 
+    bool skip = true;
+
     if (_progress == 0)
     {
         // the first sector
@@ -147,17 +150,44 @@ bool partition_updater_t::write_sector(const uint8_t *buf)
         _first_byte = bbuf[0];
         bbuf[0] = 0xff; // we use 0xff here because flash device can clear bit easily
         // but set bit with difficulty (only erase operation can set the bits)
+        skip = false;
     }
 
-    if (!ESP.flashEraseSector((_partition->address + _progress) / SPI_FLASH_SEC_SIZE))
+    if(skip)
     {
-        printf("OTA: Error: Failed to erase a sector at %08lx.\n", (long)(_partition->address + _progress));
-        goto fail;
+        // check the content is already the same as the data to be written, to save time
+        rbuf = (uint8_t*)malloc(SPI_FLASH_SEC_SIZE);
+        if(!rbuf)
+        {
+            printf("OTA: Error: Memory exhausted.\n");
+            goto fail;
+            return false; // memory exhausted
+        }
+        if(!ESP.flashRead(_partition->address + _progress, (uint32_t*)rbuf, SPI_FLASH_SEC_SIZE))
+        {
+            printf("OTA: Error: Failed to read a sector at %08lx.\n", (long)(_partition->address + _progress));
+            goto fail;
+        }
+        skip = !memcmp(rbuf, bbuf, SPI_FLASH_SEC_SIZE); // skip erase and write if the content is the same
     }
-    if (!ESP.flashWrite(_partition->address + _progress, (uint32_t *)bbuf, SPI_FLASH_SEC_SIZE))
+
+    if(!skip)
     {
-        printf("OTA: Error: Failed to write a sector at %08lx.\n", (long)(_partition->address + _progress));
-        goto fail;
+        if (!ESP.flashEraseSector((_partition->address + _progress) / SPI_FLASH_SEC_SIZE))
+        {
+            printf("OTA: Error: Failed to erase a sector at %08lx.\n", (long)(_partition->address + _progress));
+            goto fail;
+        }
+        if (!ESP.flashWrite(_partition->address + _progress, (uint32_t *)bbuf, SPI_FLASH_SEC_SIZE))
+        {
+            printf("OTA: Error: Failed to write a sector at %08lx.\n", (long)(_partition->address + _progress));
+            goto fail;
+        }
+        printf("!"); // wrote
+    }
+    else
+    {
+        printf("="); // skipped
     }
 
     if (_progress == 0)
@@ -192,11 +222,13 @@ bool partition_updater_t::write_sector(const uint8_t *buf)
         }
     }
 
-    free(bbuf);
+    if(bbuf) free(bbuf);
+    if(rbuf) free(rbuf);
     return true;
 
 fail:
-    free(bbuf);
+    if(bbuf) free(bbuf);
+    if(rbuf) free(rbuf);
     _type = utUnknown;
     return false;
 }
@@ -358,7 +390,6 @@ void updater_t::process_block()
     }
     else if (phase == phContent)
     {
-        printf(".");
         if (!partition_updater.write_sector(buffer))
         {
             printf("\nOTA: Error: Failed at partition_updater.write_sector().\n");
