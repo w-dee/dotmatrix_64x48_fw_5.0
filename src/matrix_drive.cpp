@@ -214,7 +214,7 @@ static buf_t *buf;
 
 static uint16_t led_config; // LED1642's config word
 static int current_gain_index = LED_CURRENT_GAIN_MAX; // current gain index 0 .. LED_CURRENT_GAIN_MAX
-
+static int pixel_gain = 256; // pixel brightness multiplication
 
 static void IRAM_ATTR i2s_int_hdl(void *arg);
 
@@ -462,7 +462,7 @@ static int IRAM_ATTR build_brightness(buf_t *buf, int row, int n)
 		int x = i * 8 + (n >> 1);
 		int y = (row << 1) + (n & 1);
 
-		uint16_t br = gamma_table[array[y][x]];
+		uint16_t br = gamma_table[(pixel_gain*array[y][x])>>8];
 
 		buf[ 0] = (br & (1<<15)) ? B_COLSER : 0;
 		buf[ 1] = (br & (1<<14)) ? B_COLSER : 0;
@@ -771,11 +771,25 @@ void matrix_drive_set_current_gain(int gain)
 	if(gain > LED_CURRENT_GAIN_MAX) gain = LED_CURRENT_GAIN_MAX;
 	current_gain_index = gain;
 
-	if(gain >= 40)
+	if(gain >= 64)
 	{
-		range = true; // use high range
-		gain -= 40;
-		gain += 0;
+		gain -= 64;
+		if(gain >= 40)
+		{
+			range = true; // use high range
+			gain -= 40;
+			gain += 0;
+		}
+		// use LED1642's gain
+	}
+	else
+	{
+		// use LED1642's gain as loweest current gain
+		// also use per-pixel brightness multiplication
+		gain *= 255;
+		gain /= 63;
+		pixel_gain = gain;
+		gain = 0;
 	}
 
 	uint16_t config = led_config;

@@ -381,7 +381,7 @@ public:
 	screen_led_test_t()
 	{
 		set_erase_bg(false);
-		sensors_set_contrast_always_max(true); // always maximum contrast
+		sensors_set_brightness_always_max(true); // always maximum contrast
 	}
 
 protected:
@@ -1490,15 +1490,17 @@ protected:
 
 	bool draw() override
 	{
-		int index = matrix_drive_get_current_gain(); // get current brightness index
+		int index = sensors_get_brightness_by_current_ambient(); // get current brightness index
 		if(index != 0)
 		{
 			// normal display
+			sensors_set_brightness_fix(-1);
 			draw_clock();
 			off_indication_start = millis();
 		}
 		else
 		{
+			sensors_set_brightness_fix(32);
 			// blank display
 			// display "OFF" at screen center about two seconds
 			uint32_t current = millis();
@@ -1540,12 +1542,12 @@ protected:
 
 		case BUTTON_UP:
 			// up button; increase contrast
-			sensors_change_current_contrast(+1);
+			sensors_change_current_brightness(+1);
 			return;
 
 		case BUTTON_DOWN:
 			// down button; decrease contrast
-			sensors_change_current_contrast(-1);
+			sensors_change_current_brightness(-1);
 			return;
 		}
 	}

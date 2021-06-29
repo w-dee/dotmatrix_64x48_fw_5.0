@@ -292,7 +292,9 @@ int16_t ambient_to_brightness(int16_t ambient)
 static int16_t last_read_ambient;
 static uint32_t freeze_ambient_until;
 static bool ambient_freezing;
-static bool ambient_ledtest_max_brightness; // always full brightness for led test
+static bool ambient_ledtest_fix_brightness; // always full brightness for led test
+static int ambient_ledtest_fixed_brightness; // the fixed brightness value index
+static int ambient_brightness_by_current_ambient; // brightness value index from current ambient; not affected by ambient_ledtest_fix_brightness
 static int16_t read_ambient()
 {
 	// the ambient raw value at my development desk is:
@@ -359,28 +361,39 @@ void init_ambient(void)
 	read_ambient_settings();
 }
 
+static void set_brightness_from_ambient()
+{
+    int index;
+
+    int16_t ambient = read_ambient();
+    index = ambient_brightness_by_current_ambient = ambient_to_brightness(ambient);
+
+    if(ambient_ledtest_fix_brightness)
+    {
+        index = ambient_ledtest_fixed_brightness; // override
+    }
+
+    matrix_drive_set_current_gain(index);
+
+    // index 0 is a special value which blanks the main clock display;
+    // but do not blank the status LEDs at even lowest brightness.
+    // map brightness index to 10 ... 256
+    int v = (256 - 10) * index / LED_CURRENT_GAIN_MAX + 10;
+    status_led_set_global_brightness(v);
+}
+
+int sensors_get_brightness_by_current_ambient()
+{
+    return ambient_brightness_by_current_ambient;
+}
+
 
 void poll_ambient()
 {
 
     EVERY_MS(200)
     {
-        if(!ambient_ledtest_max_brightness)
-        {
-            int16_t ambient = read_ambient();
-            int index = ambient_to_brightness(ambient);
-            matrix_drive_set_current_gain(index);
-
-            // index 0 is a special value which blanks the main clock display;
-            // but do not blank the status LEDs at even lowest brightness.
-            // map brightness index to 10 ... 256
-            int v = (256 - 10) * index / LED_CURRENT_GAIN_MAX + 10;
-            status_led_set_global_brightness(v);
-        }
-        else
-        {
-            matrix_drive_set_current_gain(LED_CURRENT_GAIN_MAX);
-        }
+        set_brightness_from_ambient();
     }
     END_EVERY_MS
 
@@ -401,12 +414,32 @@ void freeze_ambient()
 	freeze_ambient_until = millis() + AMBIENT_FREEZE_TIME;
 }
 
-void sensors_set_contrast_always_max(bool b)
+void sensors_set_brightness_always_max(bool b)
 {
-    ambient_ledtest_max_brightness = b;
+    ambient_ledtest_fix_brightness = b;
+    ambient_ledtest_fixed_brightness = LED_CURRENT_GAIN_MAX;
+    set_brightness_from_ambient();
 }
 
-void sensors_change_current_contrast(int amount)
+/**
+ * Fix brightness at specified value index.
+ * pass -1 to restore default behaviour
+ * */
+void sensors_set_brightness_fix(int brightness)
+{
+    if(brightness >= 0)
+    {
+        ambient_ledtest_fix_brightness = true;
+        ambient_ledtest_fixed_brightness = brightness;
+    }
+    else
+    {
+        ambient_ledtest_fix_brightness = false;
+    }
+    set_brightness_from_ambient();
+}
+
+void sensors_change_current_brightness(int amount)
 {
 	freeze_ambient();
 	int16_t ambient = read_ambient();

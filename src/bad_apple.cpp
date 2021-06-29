@@ -148,7 +148,7 @@ bool bad_apple()
 
     xTaskCreatePinnedToCore(decode_task, "BadApple decoder", 4096, NULL, 1, NULL, 0);
 
-	sensors_set_contrast_always_max(false);
+	sensors_set_brightness_always_max(false);
 
     return true;
 }
