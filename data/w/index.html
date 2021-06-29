@@ -204,15 +204,16 @@
 
 	<script type="riot/tag">
 		<about>
-			<div>Mazo clock 3 by W.Dee: wdee.elec.kit.sup@gmail.com </div>
-			<div>Page : <a href="https://w-dee.github.io/dotmatrix_64x48/">https://w-dee.github.io/dotmatrix_64x48/</a></div>
+			<div>Mazo clock 5 by W.Dee: wdee.elec.kit.sup@gmail.com </div>
+			<div>Page : <a href="https://github.com/w-dee/dotmatrix_64x48_hw_5.0/">https://github.com/w-dee/dotmatrix_64x48_hw_5.0/ (Hardware)</a></div>
+			<div>Page : <a href="https://github.com/w-dee/dotmatrix_64x48_fw_5.0/">https://github.com/w-dee/dotmatrix_64x48_fw_5.0/ (Firmware)</a></div>
 			
 			<div>Built at
-				{ window.settings.values.version_info.date } 
-				{ window.settings.values.version_info.time }
+				{ window.settings.values.Build_date } 
 			</div>
-			<div>Source version: { window.settings.values.version_info.src_version }</div>
-			<div>ESP8266 Arduino core version: { window.settings.values.version_info.env_version }</div>
+			<div>Source version: { window.settings.values.Source_git_revision }</div>
+			<div>ESP32 Arduino core version: { window.settings.values.Arduino_version }</div>
+			<div>ESP32-IDF version: { window.settings.values.ESP_IDF_version }</div>
 			<div><a href="LICENSE.txt">License information</a></div>
 		</about>
 	</script>

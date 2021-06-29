@@ -6,6 +6,7 @@
 #include "calendar.h"
 #include "ui.h"
 #include "mz_version.h"
+#include "buttons.h"
 
 
 // The web server
@@ -236,6 +237,13 @@ static void web_server_handle_ui_marquee()
 	send_json_ok();
 }
 
+// schedule reboot
+void schedule_reboot()
+{
+	scheduled_reboot = true;
+	scheduled_reboot_tick = millis() + 2000; // after 2 sec, reboot.
+}
+
 void web_server_setup()
 {
 	// load web user interface settings
@@ -288,12 +296,76 @@ void web_server_setup()
 			if(Updater.finish())
 			{
 				// schedule a reboot
-				scheduled_reboot = true;
-				scheduled_reboot_tick = millis() + 2000; // after 2 sec, reboot.
+				schedule_reboot();
 			}
 
 		}
 	  });
+	server.on(F("/keys/U"), HTTP_GET, []() {
+		if(!send_common_header()) return; button_push(BUTTON_UP);     send_json_ok(); });
+	server.on(F("/keys/D"), HTTP_GET, []() {
+		if(!send_common_header()) return; button_push(BUTTON_DOWN);   send_json_ok(); });
+	server.on(F("/keys/L"), HTTP_GET, []() {
+		if(!send_common_header()) return; button_push(BUTTON_LEFT);   send_json_ok(); });
+	server.on(F("/keys/R"), HTTP_GET, []() {
+		if(!send_common_header()) return; button_push(BUTTON_RIGHT);  send_json_ok(); });
+	server.on(F("/keys/O"), HTTP_GET, []() {
+		if(!send_common_header()) return; button_push(BUTTON_OK);     send_json_ok(); });
+	server.on(F("/keys/C"), HTTP_GET, []() {
+		if(!send_common_header()) return; button_push(BUTTON_CANCEL); send_json_ok(); });
+
+	server.on(F("/settings/export"), HTTP_GET, [](){
+			String filename(F("export.tar"));
+			if(!send_common_header()) return;
+			server.sendHeader(F("Content-Disposition"),
+				F("attachment; filename=\"mx5_settings.tar\""));
+			if(!settings_export(filename, String())) return;
+			File dataFile = FS.open(filename.c_str(), "r");
+			if (!dataFile) return;
+			server.streamFile(dataFile, F("application/tar"));
+			dataFile.close();
+		});
+
+	static int last_import_error = 0;
+	server.on(F("/settings/import"), HTTP_POST, [](){
+			Serial.println(F("\r\nImport done.\r\n"));
+			if(!send_common_header()) return;
+			server.send(200, F("text/plain"),
+				last_import_error == 1?
+					F("Import failed. Too large file.") :
+				last_import_error == 2?
+					F("Import failed. System will now reboot.") :
+					F("Import done. System will now reboot."));
+			server.close();
+			schedule_reboot();
+		}, []() {
+			String filename(F("import.tar"));
+			HTTPUpload& upload = server.upload();
+			if(upload.status == UPLOAD_FILE_START){
+				FS.remove(filename.c_str());
+				last_import_error = 0;
+			} else if(upload.status == UPLOAD_FILE_WRITE){
+				// upload file in progress
+				const uint8_t *p = upload.buf;
+				size_t size = upload.currentSize;
+				File dataFile = FS.open(filename.c_str(), "a");
+				if(dataFile.size() > MAX_SETTINGS_TAR_SIZE)
+				{
+					last_import_error = 1;
+					return; // max size exceeded
+				}
+				dataFile.write(p, size);
+				dataFile.close();
+			} else if(upload.status == UPLOAD_FILE_END){
+				if(!settings_import(filename))
+				{
+					last_import_error = 2;
+					return; // import error
+				}
+			}
+		});
+
+
 
 	server.onNotFound(handleNotFound);
 

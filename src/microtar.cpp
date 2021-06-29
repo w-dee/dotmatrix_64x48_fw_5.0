@@ -29,7 +29,7 @@
 
 #include "microtar.h"
 
-extern FS SPIFFS; // main FS
+#include "spiffs_fs.h"
 
 typedef struct {
   char name[100];
@@ -197,7 +197,7 @@ int mtar_open(mtar_t *tar, const char *filename, const char *mode) {
   if ( strchr(mode, 'a') ) mode = "ab";
 #endif
   /* Open file */
-  tar->stream = SPIFFS.open(filename, mode);
+  tar->stream = FS.open(filename, mode);
   if (!tar->stream) {
     return MTAR_EOPENFAIL;
   }

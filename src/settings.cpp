@@ -232,9 +232,7 @@ bool settings_export(const String & target_name,
 	const String & exclude_prefix)
 {
 	const char wmode[2]  = { 'w',  0 };
-//	const char rmode[2]  = { 'r',  0 };
-	const char rootstr[2] = { '/', 0 };
-	String tar_dir_prefix = F("mazo3_settings");
+	String tar_dir_prefix = F("mz5_settings");
 	File dir;
     File in;
 
@@ -248,7 +246,7 @@ bool settings_export(const String & target_name,
 
 	// scan settings directory
 	puts("Scanning dir ...");
-	dir = FS.open(rootstr);
+	dir = SETTINGS_SPIFFS.open("/"); // open settings directg
 	while(!!(in = dir.openNextFile()))
 	{
 		// skip excluded file name
