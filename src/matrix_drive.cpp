@@ -771,9 +771,9 @@ void matrix_drive_set_current_gain(int gain)
 	if(gain > LED_CURRENT_GAIN_MAX) gain = LED_CURRENT_GAIN_MAX;
 	current_gain_index = gain;
 
-	if(gain >= 64)
+	if(gain >= 128)
 	{
-		gain -= 64;
+		gain -= 128;
 		if(gain >= 40)
 		{
 			range = true; // use high range
@@ -787,7 +787,7 @@ void matrix_drive_set_current_gain(int gain)
 		// use LED1642's gain as loweest current gain
 		// also use per-pixel brightness multiplication
 		gain *= 255;
-		gain /= 63;
+		gain /= 127;
 		pixel_gain = gain;
 		gain = 0;
 	}
