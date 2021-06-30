@@ -405,8 +405,8 @@ static void set_brightness_from_ambient(bool force = false)
             current_ambient_brightness += current_ambient_brightness_step;
         else
             current_ambient_brightness_step = 0; // reset
-        printf("ambient: %d, brightness: %d, target: %d, step: %d, reduced: %d\n",
-            ambient, current_ambient_brightness, target, current_ambient_brightness_step, current_ambient_brightness / AMBIENT_STEP_PREC);
+//        printf("ambient: %d, brightness: %d, target: %d, step: %d, reduced: %d\n",
+//            ambient, current_ambient_brightness, target, current_ambient_brightness_step, current_ambient_brightness / AMBIENT_STEP_PREC);
     }
     END_EVERY_MS
     if(force) current_ambient_brightness = target;
