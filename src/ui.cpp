@@ -1288,10 +1288,11 @@ class screen_wifi_setting_t : public screen_menu_with_marquee_t
 public:
 	screen_wifi_setting_t() : inherited(
 								  F("WiFi config"), String(), {
-																  F("WPS       >"),
-																  F("AP List   >"),
-																  F("DHCP Mode >"),
-															  })
+									  	F("Back"),
+										F("WPS       >"),
+										F("AP List   >"),
+										F("DHCP Mode >"),
+									})
 	{
 		// make room for IP address
 		title_line_y += 5;
@@ -1335,15 +1336,19 @@ protected:
 	{
 		switch (idx)
 		{
-		case 0: // WPS
+		case 0: // Back
+			screen_manager.pop();
+			break;
+
+		case 1: // WPS
 			screen_manager.push(new screen_wps_processing_t());
 			break;
 
-		case 1: // AP List
+		case 2: // AP List
 			screen_manager.push(new screen_wifi_scanning_t());
 			break;
 
-		case 2: // DHCP mode
+		case 3: // DHCP mode
 			screen_manager.push(new screen_dhcp_mode_t());
 			break;
 		}
