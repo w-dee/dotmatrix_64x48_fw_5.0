@@ -494,6 +494,6 @@ void sensors_change_current_brightness(int amount)
 	else if(index > LED_CURRENT_GAIN_MAX) index = LED_CURRENT_GAIN_MAX;
 	printf("ambient: New current gain %d at brightness %d\n", index, (int)ambient);
 	ambient_insert_setpoint(ambient, index);
-	ambient_dump();
+	//ambient_dump();
     set_brightness_from_ambient(true);
 }
