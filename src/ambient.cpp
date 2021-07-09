@@ -295,10 +295,11 @@ static bool ambient_freezing;
 static bool ambient_ledtest_fix_brightness; // always full brightness for led test
 static int ambient_ledtest_fixed_brightness; // the fixed brightness value index
 static int ambient_brightness_by_current_ambient; // brightness value index from current ambient; not affected by ambient_ledtest_fix_brightness
-static constexpr int AMBIENT_STEP_PREC = 32;
+static constexpr int AMBIENT_STEP_PREC = 8192;
 static int current_ambient_brightness = DEFAULT_BRIGHTNESS * AMBIENT_STEP_PREC; // current ambient brightness used by adaptive smoothing; multiplied by AMBIENT_STEP_PREC
 static int current_ambient_brightness_step; // current ambient brightness incremental smoothing factor
-static constexpr int MAX_AMBIENT_BRIGHTNESS_STEP = AMBIENT_STEP_PREC*2;
+static constexpr int MAX_AMBIENT_BRIGHTNESS_STEP = AMBIENT_STEP_PREC/2;
+static constexpr int AMBIENT_FAST_STEP_THRESH = 50; // above this difference, ambient steo goes at max speed
 static int16_t read_ambient()
 {
 	// the ambient raw value at my development desk is:
@@ -374,7 +375,7 @@ static void set_brightness_from_ambient(bool force = false)
 
     // adaptive brightness smoothing
     int target = (ambient_index * AMBIENT_STEP_PREC) + AMBIENT_STEP_PREC/2;
-    EVERY_MS(200)
+    EVERY_MS(20)
     {
         // note that this function is called shorter interval than 200ms;
         // but smoothing should be constant speed
@@ -384,6 +385,11 @@ static void set_brightness_from_ambient(bool force = false)
             // sign has changed;
             // reset current ambient brightness step 
             current_ambient_brightness_step = sign ? 1 : -1;
+        }
+        else if(target - current_ambient_brightness < -AMBIENT_FAST_STEP_THRESH*AMBIENT_STEP_PREC ||
+                target - current_ambient_brightness > AMBIENT_FAST_STEP_THRESH*AMBIENT_STEP_PREC)
+        {
+            current_ambient_brightness_step = sign ? MAX_AMBIENT_BRIGHTNESS_STEP : -MAX_AMBIENT_BRIGHTNESS_STEP;
         }
         else
         {
@@ -401,8 +407,18 @@ static void set_brightness_from_ambient(bool force = false)
             }
         }
         // increment current_ambient_brightness by the step
-        if(target != current_ambient_brightness)
+        if(target > current_ambient_brightness)
+        {
             current_ambient_brightness += current_ambient_brightness_step;
+            if(current_ambient_brightness > target)
+                current_ambient_brightness = target, current_ambient_brightness_step = 0; // also reset current_ambient_brightness_step
+        }
+        else if(target < current_ambient_brightness)
+        {
+            current_ambient_brightness += current_ambient_brightness_step;
+            if(current_ambient_brightness < target)
+                current_ambient_brightness = target, current_ambient_brightness_step = 0; // also reset current_ambient_brightness_step
+        }
         else
             current_ambient_brightness_step = 0; // reset
 //        printf("ambient: %d, brightness: %d, target: %d, step: %d, reduced: %d\n",
@@ -435,7 +451,7 @@ int sensors_get_brightness_by_current_ambient()
 void poll_ambient()
 {
 
-    EVERY_MS(200)
+    EVERY_MS(20)
     {
         read_ambient();
         set_brightness_from_ambient();
