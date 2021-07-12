@@ -6,6 +6,7 @@
 #include "mz_wifi.h"
 #include "esp_wps.h"
 #include "calendar.h"
+#include "ESPmDNS.h"
 
 static bool clear_wifi_setting = false;
 
@@ -45,6 +46,18 @@ void ip_addr_settings_t::dump(const char * address_zero_comment) const
 
 }
 
+#define MDNS_HOSTNAME "mz5"
+#define MDNS_INSTANCE_NAME "MZ5 Dot Matrix Clock"
+
+/**
+ * Initialze mDNS responder
+ * */
+static void init_mDNS()
+{
+	MDNS.begin(MDNS_HOSTNAME);
+	MDNS.setInstanceName(String(MDNS_INSTANCE_NAME));
+	MDNS.addService("http", "tcp", 80);
+}
 
 /*
 	currently only PBC mode (no PIN) is implemented
@@ -152,9 +165,11 @@ void wifi_setup()
 	WiFi.mode(WIFI_OFF);
 	WiFi.setAutoReconnect(true);
 
-	// try to connect
+	// set to Station Mode
 	WiFi.mode(WIFI_STA);
 
+	// initialize mDNS
+	init_mDNS();
 }
 
 
