@@ -69,9 +69,19 @@ def do_make_archive():
     compressed = zlib.compress(stream.getvalue(), 9)
     out.write(struct.pack("<L", len(compressed)))
     out.write(compressed)
+    out.close()
 
     # done
-    print(F"Made OTA archive at {outfn}\n")
+    print(F"Made OTA compressed archive at {outfn}\n")
+
+    # write uncompressed file for old OTA firmware
+    outfn = f".pio/build/{pio_env_name}/mz5_firm.bin.uncompressed"
+    out = open(outfn, "wb")
+    out.write(stream.getvalue())
+    out.close()
+
+    # done
+    print(F"Made OTA uncompressed (for old firmwares) archive at {outfn}\n")
 
 if __name__ == '__main__':
     do_make_archive()
