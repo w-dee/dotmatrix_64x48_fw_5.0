@@ -4,7 +4,7 @@ First, you need a PlatformIO installation.
 
 The official site: https://platformio.org/
 
-You will find a bunch of sites that help you to install.
+You will find a bunch of sites that help you to install the PlatformIO.
 
 Optionally you can install PlatformIO as an extension of VS Code.
 
@@ -38,7 +38,7 @@ Connect the hardware with a USB cable and DC power adapter, then at your cloned 
 
     (at your cloned folder)$ pio run -t upload
 
-The command above only upload a "code" partition. Since MZ5 firmware uses "fs"(filesystem) and "font" partition, you will need to run following commands:
+The command above only upload a "code" partition. Since MZ5 firmware also uses "fs"(filesystem) and "font" partition, you will need to run following commands:
 
     (at your cloned folder)$ pio run -t uploadfs
     (at your cloned folder)$ pio run -t uploadfont
@@ -53,7 +53,7 @@ The OTA (over the air) update can be performed on the web interface.
 
     (at your cloned folder)$ pio run -t makearchive
 
-Then you will get ".pio/build/esp32dev/mz5_firm.bin", the OTA firmware archive.
+Then you will get ".pio/build/esp32dev/mz5_firm.bin", the OTA firmware archive. The archive includes all the partition (code, fs, fonts) needed.
 
 Or, if you are using pre-release firmware (mostly if you are beta test user), you will need the old style archive file ".pio/build/esp32dev/mz5_firm.bin.uncompressed". Try this when the OTA fails if you are using older firmware.
 
