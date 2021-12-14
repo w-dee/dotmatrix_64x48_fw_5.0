@@ -431,6 +431,8 @@ namespace cmd_ntp
         time_t tm;
         tm = time(&tm);
         printf("Local time got   : %s", ctime_r(&tm, buf)); // ctime puts \n at its last of output
+        tm = get_last_time_correct_timestamp();
+        printf("Last NTP responce: %s", tm ? ctime_r(&tm, buf) : "Not yet received\n");
     }
 
     class _cmd : public cmd_base_t

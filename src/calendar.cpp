@@ -7,6 +7,22 @@
 
 static string_vector time_servers;
 static String time_zone;
+static struct timeval last_time_correct_timestamp;
+
+static void sntp_sync_time_cb(struct timeval *tv)
+{
+    memcpy(&last_time_correct_timestamp, tv, sizeof(timeval));
+}
+
+/**
+ * @brief Get the last time correct timestamp.
+ * 
+ * @return time_t of the last time sync. If not yet, 0 is returned.
+ */
+time_t get_last_time_correct_timestamp()
+{
+    return last_time_correct_timestamp.tv_sec;
+}
 
 /**
  * reconfigure underlying time keeping facility
@@ -36,7 +52,10 @@ void init_calendar()
     if(time_servers.size() > 3) time_servers.resize(3); // only three servers are supported
 	settings_read(F("time_zone"), time_zone);
 
+    sntp_set_time_sync_notification_cb(sntp_sync_time_cb);
+
     calendar_reconfigure();
+
 }
 
 /**

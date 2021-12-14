@@ -3,6 +3,7 @@
 #include <Arduino.h>
 #include "settings.h"
 
+time_t get_last_time_correct_timestamp();
 void calendar_reconfigure();
 void init_calendar();
 
