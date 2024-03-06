@@ -78,5 +78,9 @@ Press "Update" and wait for the process done.
 
 
 
+## Read/Write entire flash (backup)
 
+Change /dev/ttyUSB0 to your board's USB-UART converter device. 16777216 is the flash size in bytes.
 
+    $ ${PLATFORMIO_CORE_DIR}/packages/tool-esptoolpy/esptool.py -b 921600 --port /dev/ttyUSB0 read_flash 0 16777216 firmware-xxxxx.bin
+    $ ${PLATFORMIO_CORE_DIR}/packages/tool-esptoolpy/esptool.py -b 921600 --port /dev/ttyUSB0 write_flash --flash_freq 80m 0 firmware-xxxxx.bin
