@@ -3,8 +3,10 @@
 #include "driver/uart.h"
 #include "status_led.h"
 #include "rom/lldesc.h"
+#include "soc/periph_defs.h"
 #include "soc/uhci_reg.h"
 #include "soc/uhci_struct.h"
+#include "driver/periph_ctrl.h"
 #include "interval.h"
 #include <algorithm>
 
@@ -206,7 +208,7 @@ void status_led_early_setup()
 
 	uart_set_pin(UART_NUM_2, IO_STATUSLED, UART_PIN_NO_CHANGE,
 		UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
-	uart_set_line_inverse(UART_NUM_2, UART_INVERSE_TXD);
+	uart_set_line_inverse(UART_NUM_2, UART_SIGNAL_TXD_INV);
 
 	// blank all leds
 	delayMicroseconds(500); // wait for WS2812 recognizes the first "reset" signal

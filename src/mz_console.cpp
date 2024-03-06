@@ -1,6 +1,7 @@
 #define Binary_h // a kind of nasty thing: disable warning about redefinition of BXXXX
 #include <Arduino.h>
 #include <mz_console.h>
+#include <vector>
 #include "esp_console.h"
 #include "esp_system.h"
 #include "esp_log.h"
@@ -231,9 +232,9 @@ void init_console()
 	setvbuf(stdout, NULL, _IONBF, 0);
 
 	/* Minicom, screen, idf_monitor send CR when ENTER key is pressed */
-	esp_vfs_dev_uart_set_rx_line_endings(ESP_LINE_ENDINGS_CR);
+	esp_vfs_dev_uart_port_set_rx_line_endings(UART_NUM_1, ESP_LINE_ENDINGS_CR);
 	/* Move the caret to the beginning of the next line on '\n' */
-	esp_vfs_dev_uart_set_tx_line_endings(ESP_LINE_ENDINGS_CRLF);
+	esp_vfs_dev_uart_port_set_tx_line_endings(UART_NUM_1, ESP_LINE_ENDINGS_CRLF);
 
 	/* Install UART driver for interrupt-driven reads and writes */
 	ESP_ERROR_CHECK( uart_driver_install((uart_port_t)CONFIG_CONSOLE_UART_NUM,

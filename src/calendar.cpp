@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include "calendar.h"
 #include "settings.h"
-#include "lwip/apps/sntp.h"
+#include <esp_sntp.h>
 #include <time.h>
 #include <stdlib.h>
 

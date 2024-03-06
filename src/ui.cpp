@@ -1249,7 +1249,7 @@ protected:
 		else
 		{
 			// check the result
-			system_event_id_t result = wifi_get_wps_status();
+			WiFiEvent_t result = wifi_get_wps_status();
 			switch (result)
 			{
 			case SYSTEM_EVENT_WIFI_READY:

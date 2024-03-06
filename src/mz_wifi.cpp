@@ -75,8 +75,8 @@ static String ap_pass;
 static ip_addr_settings_t ip_addr_settings;
 
 static void wpsInitConfig(){
-  config.crypto_funcs = &g_wifi_default_wps_crypto_funcs;
-  config.wps_type = ESP_WPS_MODE;
+//  config.crypto_funcs = &g_wifi_default_wps_crypto_funcs;
+  config.wps_type = WPS_TYPE_PBC;
   strcpy(config.factory_info.manufacturer, ESP_MANUFACTURER);
   strcpy(config.factory_info.model_number, ESP_MODEL_NUMBER);
   strcpy(config.factory_info.model_name, ESP_MODEL_NAME);
@@ -92,10 +92,10 @@ static String wpspin2string(uint8_t a[]){
   return (String)wps_pin;
 }
 
-static WiFiEvent_t wps_last_state = SYSTEM_EVENT_WIFI_READY;
+static WiFiEvent_t wps_last_state = ARDUINO_EVENT_WIFI_READY;
 static bool reconfigure_ntp = false;
 
-static void WiFiEvent(WiFiEvent_t event, system_event_info_t info){
+static void WiFiEventHandler(WiFiEvent_t event, arduino_event_info_t info){
   switch(event){
     case SYSTEM_EVENT_STA_START:
 //      puts("Station mode started");
@@ -141,7 +141,7 @@ static void WiFiEvent(WiFiEvent_t event, system_event_info_t info){
       esp_wifi_wps_disable();
       break;
     case SYSTEM_EVENT_STA_WPS_ER_PIN:
-      printf("WPS_PIN = %s\r\n", wpspin2string(info.sta_er_pin.pin_code).c_str());
+      printf("WPS_PIN = %s\r\n", wpspin2string(info.wps_er_pin.pin_code).c_str());
       break;
     default:
       break;
@@ -159,7 +159,7 @@ void wifi_setup()
 	wifi_init_settings();
 
 	// register event handler
-	WiFi.onEvent(WiFiEvent);
+	WiFi.onEvent(WiFiEventHandler);
 
 	// first, disconnect wifi
 	WiFi.mode(WIFI_OFF);
@@ -205,7 +205,7 @@ void wifi_check()
 void wifi_wps()
 {
 	wpsInitConfig();
-	wps_last_state = SYSTEM_EVENT_WIFI_READY;
+	wps_last_state = ARDUINO_EVENT_WIFI_READY;
 	esp_wifi_wps_enable(&config);
 	esp_wifi_wps_start(0);
 }
