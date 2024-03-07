@@ -5,7 +5,7 @@
 
 typedef std::vector<String> string_vector;
 
-const char CLEAR_SETTINGS_INDICATOR_FILE[] = "/spiffs/.clear"; // a file indicated by its existance, to clear all settings at boot
+const char CLEAR_SETTINGS_INDICATOR_FILE[] = "/fs/.clear"; // a file indicated by its existance, to clear all settings at boot
 
 static constexpr size_t MAX_SETTINGS_TAR_SIZE = 32*1024;
 

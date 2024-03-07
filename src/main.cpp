@@ -1,6 +1,6 @@
 #include <Arduino.h>
 #include "matrix_drive.h"
-#include "spiffs_fs.h"
+#include "flash_fs.h"
 #include "settings.h"
 #include "mz_update.h"
 #include "mz_wifi.h"
@@ -22,6 +22,7 @@
 #define MY_CONFIG_ARDUINO_LOOP_STACK_SIZE 16384U
 extern TaskHandle_t loopTaskHandle; // defined in main.cpp of Arduino core
 extern void loopTask(void *pvParameters); // defined in main.cpp of Arduino core 
+extern bool indicate_clear_settings; // set true if settings store clearing is needed
 
 void setup() {
   // AARRRRRRRRRRGGGGHHHHHHHHHHHHHHHHHHHHHHH!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -61,10 +62,10 @@ void setup() {
   panic_record_checkpoint(CP_MATRIX_CHECK);
   matrix_drive_setup();
 
-  panic_record_checkpoint(CP_SPIFFS_OPEN);
-  init_fs(); // in init_fs(), if main SPIFFS mount fails, set_system_recovery_mode() issues.
+  panic_record_checkpoint(CP_FS_OPEN);
+  init_fs(); // in init_fs(), if main LittleFS mount fails, set_system_recovery_mode() will be called.
 
-
+  panic_record_checkpoint(CP_SETTINGS_CLEAR);
   // before init_settings, check cancel buttion be pressed over 1sec
   delay(100); // wait for matrix row drive cycles several times
   button_check_physical_buttons_are_sane(); // check whether the button input is floating or not
@@ -89,7 +90,7 @@ void setup() {
     puts("");
   }
 
-  // or, if /spiffs/.clear exist, clear all settings
+  // or, if /fs/.clear exist, clear all settings
   if(FILE *f = fopen(CLEAR_SETTINGS_INDICATOR_FILE, "r"))
   {
     fclose(f);
@@ -98,6 +99,15 @@ void setup() {
     fflush(stdout);
     clear_settings();
   }
+
+  // or, if indicate_clear_settings flag is set
+  if(indicate_clear_settings)
+  {
+    printf("Mounting settings store repeatedly failed. Clearing settings.\n");
+    fflush(stdout);
+    clear_settings();
+  }
+
 
   panic_record_checkpoint(CP_SETTINGS_OPEN);
   init_settings();

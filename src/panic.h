@@ -8,7 +8,8 @@ enum boot_checkpoint_t : uint8_t
     CP_BOOTED, // successfully booted
     CP_BOOT, // at boot
     CP_MATRIX_CHECK, // before matrix check
-    CP_SPIFFS_OPEN, // before main SPIFFS open
+    CP_FS_OPEN, // before main LittleFS open
+    CP_SETTINGS_CLEAR, // before settings clear check
     CP_SETTINGS_OPEN, // before settings store open
     CP_WIFI_START, // before WiFi start   
 };
@@ -18,8 +19,8 @@ enum panic_reason_t : uint8_t
 {
     PANIC_NONE,
     PANIC_TOO_WEAK_POWER_SUPPLY, // power supply might be too weak
-    PANIC_MAIN_SPIFFS_OPEN_FAILED, // main spiffs cannot be mounted
-    PANIC_SETTINGS_STORE_SPIFFS_FAILED, // settings store spiffs cannot be mounted
+    PANIC_MAIN_FS_OPEN_FAILED, // main LittleFS cannot be mounted
+    PANIC_SETTINGS_FS_CLEAR_FAILED, // settings LittleFS cannot be cleared
     PANIC_UNKOWN_BOOT_REASON, // unknown boot related reason
 };
 
@@ -33,3 +34,4 @@ void panic_check_repeated_boot();
 void panic_notify_loop_is_running();
 void panic_show_boot_count();
 
+ __attribute__((noreturn)) void immediate_reset();

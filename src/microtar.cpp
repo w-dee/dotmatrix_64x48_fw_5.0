@@ -29,7 +29,7 @@
 
 #include "microtar.h"
 
-#include "spiffs_fs.h"
+#include "flash_fs.h"
 
 typedef struct {
   char name[100];

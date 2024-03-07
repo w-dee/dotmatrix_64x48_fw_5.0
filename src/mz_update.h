@@ -13,7 +13,7 @@ public:
     {
         utUnknown,
         utCode,
-        utSPIFFS,
+        utFS,
         utFont,
     };
     partition_updater_t() : _type(utUnknown), _size(0), _first_byte(0xff), _progress(0), _partition(nullptr) {}

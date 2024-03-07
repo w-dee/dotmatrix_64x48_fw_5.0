@@ -3,6 +3,7 @@
 #include "settings.h"
 #include <rom/miniz.h>
 #include <functional>
+#include "flash_fs.h"
 
 // streamed ZLIB decompressor
 class mz_inflator_t
@@ -269,9 +270,12 @@ const esp_partition_t *partition_updater_t::next_partition_from_type(update_type
     case utCode:
         return esp_partition_find_first(ESP_PARTITION_TYPE_APP,
                                         (active == 1) ? ESP_PARTITION_SUBTYPE_APP_OTA_0 : ESP_PARTITION_SUBTYPE_APP_OTA_1, nullptr);
-    case utSPIFFS:
-        return esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_SPIFFS,
-                                        (active == 1) ? "spiffs0" : "spiffs1");
+    case utFS:
+      {
+        const char * part_name = get_main_flash_fs_partition_name((active == 1) ? 0 : 1);
+        const esp_partition_t * par =  esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_ANY, part_name); // old partition naming scheme
+        return par;
+      }
     case utFont:
         return esp_partition_find_first((esp_partition_type_t)0x40,
                                         (esp_partition_subtype_t)((active == 1) ? 0 : 1), nullptr); // see custom.csv for partition table
@@ -365,8 +369,8 @@ void updater_t::process_block()
         partition_updater_t::update_type_t type = partition_updater_t::utUnknown;
         if (!strcmp(header.label, "font"))
             type = partition_updater_t::utFont;
-        else if (!strcmp(header.label, "spiffs"))
-            type = partition_updater_t::utSPIFFS;
+        else if (!strcmp(header.label, "fs"))
+            type = partition_updater_t::utFS;
         else if (!strcmp(header.label, "app"))
             type = partition_updater_t::utCode;
         else
@@ -566,11 +570,9 @@ void reboot(bool clear_settings)
         if (f)
             fclose(f);
     }
-    // ummm...
-    // As far as I know, spiffs is always-consistent,
-    // so at any point, rebooting the hardware may not corrupt
-    // the filesystem. Obviously FAT is not. Take care if
-    // using micro SD cards.
+
+
+    // TODO: check if the filesystem shutdown is needed
     printf("Rebooting ...\n");
     delay(1000);
     ESP.restart();

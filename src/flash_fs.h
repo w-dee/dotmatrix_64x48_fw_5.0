@@ -15,25 +15,27 @@
 
 // Modified by W.Dee to be able to mount specified partition label
 
-#ifndef _SPIFFS_FS_H_
-#define _SPIFFS_FS_H_
+#ifndef _FLASH_FS_H_
+#define _FLASH_FS_H_
 
 #include "FS.h"
 
 namespace fs
 {
 
-class ANY_SPIFFSFS : public FS
+class ANY_LittleFSFS : public FS
 {
 public:
-    ANY_SPIFFSFS();
-    bool begin(bool formatOnFail=false, const char *label = nullptr, const char * basePath="/spiffs", uint8_t maxOpenFiles=10);
+    ANY_LittleFSFS();
+    bool begin(bool formatOnFail=false, const char *label = nullptr, const char * basePath="/fs", uint8_t maxOpenFiles=10);
     bool format(const char * label = nullptr);
 };
 
 }
 
-extern fs::ANY_SPIFFSFS FS;
+extern fs::ANY_LittleFSFS FS;
+
+const char *get_main_flash_fs_partition_name(int generation);
 
 void init_fs();
 

@@ -9,6 +9,7 @@
 static nvs_handle nvs_hnd;
 static const char *boot_count_name = "boot_count";
 static const char *boot_cp_name = "boot_cp";
+bool indicate_clear_settings = false; // set true if settings store clearing is needed
 
 
 // rough delay for panic loop
@@ -87,6 +88,7 @@ static uint32_t panic_get_boot_count()
 void panic_reset_boot_count()
 {
     nvs_set_u32(nvs_hnd, boot_count_name, 0);
+    nvs_set_u8(nvs_hnd, boot_cp_name, (uint8_t) 0);
     nvs_commit(nvs_hnd);
 }
 
@@ -112,6 +114,15 @@ boot_checkpoint_t panic_get_last_checkpoint()
 // check repeating boot
 void panic_check_repeated_boot()
 {
+    boot_checkpoint_t last_cp = panic_get_last_checkpoint();
+    if(last_cp == CP_SETTINGS_CLEAR)
+    {
+        // This will be an immediate failure.
+        // Settings store clearing has repeatedly failed; // ummm.......... what can we do ?
+        do_panic(PANIC_SETTINGS_FS_CLEAR_FAILED);
+    }
+
+
     uint32_t boot_count = panic_increment_boot_count();
     if(boot_count > BOOT_REPEAT_THRESH)
     {
@@ -123,7 +134,6 @@ void panic_check_repeated_boot()
     {
         // boot repeat threshold reached
         // what's happened?
-        boot_checkpoint_t last_cp = panic_get_last_checkpoint();
         switch(last_cp)
         {
         case CP_BOOTED:
@@ -140,15 +150,20 @@ void panic_check_repeated_boot()
             do_panic(PANIC_TOO_WEAK_POWER_SUPPLY);
             break;
 
-        case CP_SPIFFS_OPEN:
-            // SPIFFS open has repeatedly failed; // ummm.......... what can we do ?
-            do_panic(PANIC_MAIN_SPIFFS_OPEN_FAILED);
+        case CP_FS_OPEN:
+            // LittleFS open has repeatedly failed; // ummm.......... what can we do ?
+            do_panic(PANIC_MAIN_FS_OPEN_FAILED);
             break;
         
+        case CP_SETTINGS_CLEAR:
+            // no way
+            do_panic(PANIC_SETTINGS_FS_CLEAR_FAILED);
+            break;
+
         case CP_SETTINGS_OPEN:
-            // settings store open has repeatedly failed.
-            // user can re-format the settings store by physical button
-            do_panic(PANIC_SETTINGS_STORE_SPIFFS_FAILED);
+            // settings store open has repeatedly failed after clearing the store.
+            // try clearing the settings store.
+            indicate_clear_settings = true;
             break;
 
         case CP_WIFI_START:
@@ -184,5 +199,14 @@ void panic_notify_loop_is_running()
 
 void panic_show_boot_count()
 {
-    printf("Errornous repeated boot count : %d\n", (int)panic_get_boot_count());
+    printf("Errornous repeated boot count = %d, last checkpoint = %d\n",
+        (int)panic_get_boot_count(), (int)panic_get_last_checkpoint());
+}
+
+// Reset immediately. This will be different action from 
+// reboot() in mz_update.cpp which tries safe reboot.
+void immediate_reset()
+{
+    ESP.restart();
+    for(;;) ;
 }

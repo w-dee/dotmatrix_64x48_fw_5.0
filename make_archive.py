@@ -18,13 +18,13 @@ def do_make_archive():
 
     files = [
         ["src/fonts/TakaoPGothicC.ttf", "font"],
-        [f"{pio_build_dir}/spiffs.bin", "spiffs"],
+        [f"{pio_build_dir}/littlefs.bin", "fs"],
         [f"{pio_build_dir}/firmware.bin", "app"] # the firmware must be the last
     ]
 
     sector_size = 4096
 
-    # execute spiffs binary generation (TODO: proper scons execution)
+    # execute filesystem binary generation (TODO: proper scons execution)
     res = subprocess.call(f"pio run --target buildfs --environment {pio_env_name}", shell=True)
     if(res != 0):
         print("Could not run pio command. Check the pio installation.\n")

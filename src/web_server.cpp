@@ -1,6 +1,6 @@
 #include <WebServer.h>
 #include <StreamString.h>
-#include "spiffs_fs.h"
+#include "flash_fs.h"
 #include "mz_update.h"
 #include "settings.h"
 #include "calendar.h"
@@ -121,7 +121,7 @@ static void handleNotFound()
 	{
 		// filesystem content missing or filesystem mount failed.
 		// show fallback message
-		printf("SPIFFS content missing or mount failed. Showing fallback message.\n");
+		printf("LittleFS content missing or mount failed. Showing fallback message.\n");
 		server.send(200, F("text/html"), updateIndex);
 		return;
 	}

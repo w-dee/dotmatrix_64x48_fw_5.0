@@ -4,23 +4,37 @@
 #include "libb64/cencode.h"
 #include "settings.h"
 #include "microtar.h"
-#include "spiffs_fs.h"
+#include "flash_fs.h"
+#include "panic.h"
 #include <rom/crc.h>
 
 static const String SETTINGS_PART_LABEL(F("conf")); // partition label
 static const String SETTINGS_MOUNT_POINT(F("/settings")); // mount point
 
-fs::ANY_SPIFFSFS SETTINGS_SPIFFS;
+fs::ANY_LittleFSFS SETTINGS_FS;
 
 void init_settings()
 {
 	puts("Settings store initializing ...");
-    SETTINGS_SPIFFS.begin(true, SETTINGS_PART_LABEL.c_str(), SETTINGS_MOUNT_POINT.c_str(), 2);
+	bool second = false;
+retry:
+    if(!SETTINGS_FS.begin(true, SETTINGS_PART_LABEL.c_str(), SETTINGS_MOUNT_POINT.c_str(), 2))
+	{
+		if(second)
+		{
+			printf("Settings store LittleFS mount failed twice. Inducing panic mode.\n");
+			immediate_reset(); // this will induce panic mode after several reboots.
+		}
+		printf("Settings store LittleFS mount failed. Trying to clear all settings.\n");
+		clear_settings();
+		second = true;
+		goto retry;
+	}
 }
 
 void clear_settings()
 {
-	SETTINGS_SPIFFS.format(SETTINGS_PART_LABEL.c_str());
+	SETTINGS_FS.format(SETTINGS_PART_LABEL.c_str());
 }
 
 static constexpr size_t MAX_KEY_LEN = 30;
@@ -69,7 +83,7 @@ bool settings_write(const String & _key, const void * ptr, size_t size, settings
 	{
 		// check key existence
 		const char mode[2]  = { 'r',  0  };
-		File file = SETTINGS_SPIFFS.open(key, mode);
+		File file = SETTINGS_FS.open(key, mode);
 		if(file)
 		{
 			if(settings_check_crc(file))
@@ -83,7 +97,7 @@ bool settings_write(const String & _key, const void * ptr, size_t size, settings
 	}
 
 	const char mode[2]  = { 'w',  0  };
-	File file = SETTINGS_SPIFFS.open(key, mode);
+	File file = SETTINGS_FS.open(key, mode);
 	if(!file) return false;
 
 	uint32_t crc = INITIAL_CRC_VALUE;
@@ -113,7 +127,7 @@ bool settings_read(const String & _key, void *ptr, size_t size)
 	String key = String(F("/")) + _key;
 
 	const char mode[2]  = { 'r',  0  };
-	File file = SETTINGS_SPIFFS.open(key, mode);
+	File file = SETTINGS_FS.open(key, mode);
 	if(!file) return false;
 
 	if(!settings_check_crc(file)) { file.close(); return false; }
@@ -133,7 +147,7 @@ bool settings_read(const String & _key, String & value)
 	String key = String(F("/")) + _key;
 
 	const char mode[2]  = { 'r',  0  };
-	File file = SETTINGS_SPIFFS.open(key, mode);
+	File file = SETTINGS_FS.open(key, mode);
 	if(!file) return false;
 
 	if(!settings_check_crc(file)) { file.close(); return false; }
@@ -195,7 +209,7 @@ bool settings_read_vector(const String & _key, string_vector & value)
 	value.clear();
 
 	const char mode[2]  = { 'r',  0  };
-	File file = SETTINGS_SPIFFS.open(key, mode);
+	File file = SETTINGS_FS.open(key, mode);
 	if(!file) return false;
 
 	if(!settings_check_crc(file)) { file.close(); return false; }
@@ -246,7 +260,7 @@ bool settings_export(const String & target_name,
 
 	// scan settings directory
 	puts("Scanning dir ...");
-	dir = SETTINGS_SPIFFS.open("/"); // open settings directg
+	dir = SETTINGS_FS.open("/"); // open settings directg
 	while(!!(in = dir.openNextFile()))
 	{
 		// skip excluded file name
@@ -325,7 +339,7 @@ bool settings_import(const String & target_name)
 		fn = String(F("/")) + fn; // make it on the root directory
 
 		// open file
-		File out = SETTINGS_SPIFFS.open(fn.c_str(), wmode);
+		File out = SETTINGS_FS.open(fn.c_str(), wmode);
 
 		// reserve checksum space
 		uint32_t crc = 0xffffffff;
