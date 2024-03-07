@@ -4,17 +4,42 @@
 #include "nvs_flash.h"
 #include "nvs.h"
 #include "mz_wifi.h"
+#include "status_led.h"
 
 static nvs_handle nvs_hnd;
 static const char *boot_count_name = "boot_count";
 static const char *boot_cp_name = "boot_cp";
+
+
+// rough delay for panic loop
+static void panic_delay(int ms)
+{
+    while(ms --) { status_led_loop(); delay(1); }
+}
 
 // do panic
  __attribute__((noreturn)) void do_panic(panic_reason_t reason)
 {
     printf("---------PANIC--------\nReason code: %d\n", (int)reason);
     panic_reset_boot_count(); // reset boot count to prevent infinite boot loop
-    for(;;) ; // TODO: real panic indication
+
+    // brink led
+    status_led_set_global_brightness(256);
+    for(;;)
+    {
+        for(int i = 0; i < (int)reason; ++i)
+        {
+            status_led_array[0].b = 0;
+            status_led_array[0].g = 0;
+            status_led_array[0].r = 255;
+            panic_delay(100);
+            status_led_array[0].b = 0;
+            status_led_array[0].g = 0;
+            status_led_array[0].r = 0;
+            panic_delay(300);
+        }
+        panic_delay(2000);
+    }
 }
 
 
