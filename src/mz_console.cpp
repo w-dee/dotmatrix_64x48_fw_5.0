@@ -226,15 +226,15 @@ void init_console()
 	uart_config.parity = UART_PARITY_DISABLE;
 	uart_config.stop_bits = UART_STOP_BITS_1;
 	uart_config.flow_ctrl = UART_HW_FLOWCTRL_DISABLE;
-	uart_param_config(UART_NUM_1, &uart_config);
+	uart_param_config(CONFIG_CONSOLE_UART_NUM, &uart_config);
 
 	setvbuf(stdin, NULL, _IONBF, 0);
 	setvbuf(stdout, NULL, _IONBF, 0);
 
 	/* Minicom, screen, idf_monitor send CR when ENTER key is pressed */
-	esp_vfs_dev_uart_port_set_rx_line_endings(UART_NUM_1, ESP_LINE_ENDINGS_CR);
+	esp_vfs_dev_uart_port_set_rx_line_endings(CONFIG_CONSOLE_UART_NUM, ESP_LINE_ENDINGS_CR);
 	/* Move the caret to the beginning of the next line on '\n' */
-	esp_vfs_dev_uart_port_set_tx_line_endings(UART_NUM_1, ESP_LINE_ENDINGS_CRLF);
+	esp_vfs_dev_uart_port_set_tx_line_endings(CONFIG_CONSOLE_UART_NUM, ESP_LINE_ENDINGS_CRLF);
 
 	/* Install UART driver for interrupt-driven reads and writes */
 	ESP_ERROR_CHECK( uart_driver_install((uart_port_t)CONFIG_CONSOLE_UART_NUM,
@@ -249,6 +249,13 @@ void init_console()
 	initialize_commands();
 }
 
+
+// Flush stdout and wait for the UART buffer empty for maximum 100ms.
+void flush_stdout()
+{
+	fflush(stdout);
+	uart_wait_tx_done(CONFIG_CONSOLE_UART_NUM, pdMS_TO_TICKS(100));
+}
 
 static void load_console_history()
 {

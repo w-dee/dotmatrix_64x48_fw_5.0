@@ -63,6 +63,8 @@ void console_probe();
  * */
 void init_console();
 
+void flush_stdout();
+
 /**
  * This must be called after settings filesystem becoming ready.
  * */

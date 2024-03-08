@@ -67,7 +67,7 @@ void setup() {
   if(get_nvs_clear_settings())
   {
     printf("Clearing settings store requested. Clearing.\n");
-    fflush(stdout);
+    flush_stdout();
     _clear_settings();
   }
 
@@ -96,12 +96,12 @@ void setup() {
       if(!(button_get_scan_bits() & BUTTON_CANCEL)) { clear_it = false; break; }
       delay(100);
       printf(".");
-      fflush(stdout);
+      flush_stdout();
     }
     if(clear_it)
     {
         printf(" OK, now clearing settings.");
-        fflush(stdout);
+        flush_stdout();
         set_nvs_clear_settings_on_next_boot_and_reboot(); // will reboot. does not return
     }
     puts("");
@@ -113,7 +113,7 @@ void setup() {
     fclose(f);
     unlink(CLEAR_SETTINGS_INDICATOR_FILE);
     printf("Clearing settings requested.\n");
-    fflush(stdout);
+    flush_stdout();
     set_nvs_clear_settings_on_next_boot_and_reboot(); // will reboot. does not return
   }
 

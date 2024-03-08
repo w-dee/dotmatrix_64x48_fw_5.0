@@ -5,6 +5,7 @@
 #include "nvs.h"
 #include "mz_wifi.h"
 #include "status_led.h"
+#include "mz_console.h"
 
 static nvs_handle nvs_hnd;
 static const char *boot_count_name = "boot_count";
@@ -97,8 +98,7 @@ void panic_reset_boot_count()
 void panic_record_checkpoint(boot_checkpoint_t cp)
 {
     printf("Boot checkpoint: %d\r\n", (int)cp);
-    fflush(stderr);
-    delay(100);
+    flush_stdout();
     nvs_set_u8(nvs_hnd, boot_cp_name, (uint8_t) cp);
     nvs_commit(nvs_hnd);
 }

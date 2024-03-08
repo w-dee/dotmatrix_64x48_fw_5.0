@@ -286,14 +286,14 @@ namespace cmd_wifi_scan
             }) ;
             // scan is running ... wait it done
             printf("Scanning ");
-            fflush(stdout);
+            flush_stdout();
             while(run_in_main_thread([] () -> int {
                 return WiFi.scanComplete() == WIFI_SCAN_RUNNING;
             }))
             {
                 vTaskDelay(200);
                 putchar('.');
-                fflush(stdout);
+                flush_stdout();
             }
             puts("");
             // show the result
