@@ -49,7 +49,7 @@ static void receive_task(void *)
     rmt_config(&rmt_rx_config);
     rmt_driver_install(RMT_CHANNEL_0, 1000, 0);
 
-    // get ringbuffer handle
+    // get ring buffer handle
     RingbufHandle_t rb = nullptr;
     rmt_get_ringbuf_handle(RMT_CHANNEL_0, &rb);
 
@@ -101,7 +101,7 @@ done:
 
 void rmt_start_receive()
 {
-    if(result != rmt_idle) return; // other rmt function is runnnig
+    if(result != rmt_idle) return; // other rmt function is running
 
     result = rmt_rx;
 
@@ -203,7 +203,7 @@ static void send_task(void *)
 
 void rmt_start_send(const String & filename)
 {
-    if(result != rmt_idle) return; // other rmt function is runnnig
+    if(result != rmt_idle) return; // other rmt function is running
 
     // open the file and read content
     FILE *f = fopen((rmt_save_prefix + filename).c_str(), "rb");

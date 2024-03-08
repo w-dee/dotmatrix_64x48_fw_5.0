@@ -52,14 +52,14 @@ protected:
 	//! Called when a button is pushed
 	virtual void on_button(uint32_t button) { ; }
 
-	//! Repeatedly called 10ms intervally when the screen is active
+	//! Repeatedly called 10ms periodically when the screen is active
 	virtual void on_idle_10() { ; }
 
-	//! Repeatedly called 50ms intervally when the screen is active
+	//! Repeatedly called 50ms periodically when the screen is active
 	virtual void on_idle_50() { ; }
 
 	//! Draw content; this function is automatically called 50ms
-	//! intervally to refresh the content. Do not call
+	//! periodically to refresh the content. Do not call
 	//! blocking function (like network, filesystem, serial)
 	virtual bool draw() { return false; }
 
@@ -263,7 +263,7 @@ protected:
 			}
 
 			// care must be taken,
-			// the screen may be poped (removed) during previous event
+			// the screen may be pop'ed (removed) during previous event
 			if (!stack_changed && tick_interval_50 == 0)
 			{
 				// dispatch idle event
@@ -403,7 +403,7 @@ protected:
 			return;
 
 		case BUTTON_CANCEL:
-			// fill framebuffer with 0xff
+			// fill frame buffer with 0xff
 			get_current_frame_buffer().fill(0xff);
 			return;
 
@@ -662,7 +662,7 @@ protected:
 				String _line = line;
 				// make the string on stack, because in on_ok(),
 				// the implementer may call screen_manager.pop(),
-				// which leads to delete thisself.
+				// which leads to delete this-self.
 				if (validate(_line))
 					on_ok(_line);
 			}
@@ -711,8 +711,8 @@ protected:
 		}
 	}
 
-	virtual void on_ok(const String &line) { ; } //!< when the user pressed OK butotn
-	virtual void on_cancel() { ; }				 //!< when the user pressed CANCEL butotn
+	virtual void on_ok(const String &line) { ; } //!< when the user pressed OK button
+	virtual void on_cancel() { ; }				 //!< when the user pressed CANCEL button
 };
 
 //! IP string editor UI
@@ -837,8 +837,8 @@ protected:
 			break;
 		}
 	}
-	virtual void on_ok(int item_idx) { ; } //!< when the user pressed OK butotn
-	virtual void on_cancel() { ; }		   //!< when the user pressed CANCEL butotn
+	virtual void on_ok(int item_idx) { ; } //!< when the user pressed OK button
+	virtual void on_cancel() { ; }		   //!< when the user pressed CANCEL button
 };
 
 //! Menu list UI with scrolling marquee under title
@@ -1116,7 +1116,7 @@ protected:
 
 class screen_ap_list_t : public screen_menu_t
 {
-	int num_stations; //!< number of stations scaned
+	int num_stations; //!< number of stations scanned
 public:
 	screen_ap_list_t(int _num_stations) : screen_menu_t(F("AP List"), {}),
 										  num_stations(_num_stations)
@@ -1126,7 +1126,7 @@ public:
 		get_items().push_back(F("-- Manual AP Name Input --"));
 
 		// Push station names order by its rssi.
-		// Here we use naiive method to sort the list...
+		// Here we use naive method to sort the list...
 		// Assumes the list is not so big.
 		for (int rssi = 0; rssi >= -100; --rssi)
 		{
@@ -1313,7 +1313,7 @@ protected:
 		}
 		else
 		{
-			/* convert dot to shrinked dot '\x01' */
+			/* convert dot to shrunk dot '\x01' */
 			char buf[16]; // maximum IPv4 address length = 15
 			const char * in = settings.ip_addr.c_str();
 			char * out = buf;

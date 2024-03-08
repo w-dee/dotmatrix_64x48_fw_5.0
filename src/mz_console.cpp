@@ -36,15 +36,15 @@ void cmd_base_t::usage() const
 
 int cmd_base_t::handler(int argc, char **argv)
 {
-	int nerrors;
-	nerrors = arg_parse(argc,argv,at);
+	int n_errors;
+	n_errors = arg_parse(argc,argv,at);
 	if(((struct arg_lit*)at[0])->count > 0) // at[0] must be help
 	{
 		usage();
 		return 0;
 	}
 
-	if (nerrors > 0)
+	if (n_errors > 0)
 	{
 		// search for arg_end
 		int tabindex;
@@ -189,7 +189,7 @@ static void console_task(void *)
 {
 	console_probe(); // will take a few seconds, so call it from the non-main thread
 
-	// Note, this function is to be run inside separete thread
+	// Note, this function is to be run inside separate thread
 	char *line;
 	for(;;) {
 		if(dumb_mode)

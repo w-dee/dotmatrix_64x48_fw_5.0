@@ -55,7 +55,7 @@ bool validate_ipv4_address(const String &string_addr);
 bool validate_ipv4_netmask(const String  &string_addr);
 
 /**
- * retrieves wifi network list from WiFiScanClass, then sort them by RSSID,
+ * retrieves wifi network list from WiFiScanClass, then sort them by RSSI,
  * then returns them. Scan results stored in WiFiScanClass are cleared.
  * */
 std::vector<wifi_scan_item_t>  get_wifi_scan_list(size_t max = SIZE_MAX);

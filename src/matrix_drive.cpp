@@ -171,7 +171,7 @@ static void led_post()
 
 #define NUM_LED1642  8 // number of LED1642 in serial
 /**
- * set LED1642 register using bitbanging
+ * set LED1642 register using bit banging
  */
 static void led_post_set_led1642_reg(int reg, uint16_t val)
 {
@@ -227,7 +227,7 @@ static void init_dma() {
 	periph_module_enable(PERIPH_I2S1_MODULE);
 
 	// allocate memories
-	// note that MALOC_CAP_DMA ensures the memories are reachable from DMA hardware
+	// note that MALLOC_CAP_DMA ensures the memories are reachable from DMA hardware
 	buf = (buf_t*)heap_caps_malloc(BUFSZ * sizeof(*buf), MALLOC_CAP_DMA);
 	dmaDesc = (lldesc_t*)heap_caps_malloc((BUFSZ / MAX_DMA_ITEM_COUNT) * sizeof(lldesc_t), MALLOC_CAP_DMA);
 	memset((void*)buf, 0, BUFSZ * sizeof(*buf));
@@ -312,27 +312,27 @@ static void init_dma() {
 	I2S1.lc_conf.out_rst=0;
 
 	//Fill DMA descriptor, each MAX_DMA_ITEM_COUNT entries
-	volatile lldesc_t * pdma = dmaDesc;
+	volatile lldesc_t * p_dma = dmaDesc;
 	uint8_t *b = buf;
 	int remain = BUFSZ;
 	while(remain > 0)
 	{
 		int one_len = MAX_DMA_ITEM_COUNT < remain ? MAX_DMA_ITEM_COUNT: remain;
-		pdma->length=one_len;
-		pdma->size=one_len;
-		pdma->owner=1;
-		pdma->sosf=0;
-		pdma->buf=(uint8_t *)b;
-		pdma->offset=0; //unused in hw
-		pdma->empty= (int32_t)(pdma + 1);
-		pdma->eof=0;
+		p_dma->length=one_len;
+		p_dma->size=one_len;
+		p_dma->owner=1;
+		p_dma->sosf=0;
+		p_dma->buf=(uint8_t *)b;
+		p_dma->offset=0; //unused in hw
+		p_dma->empty= (int32_t)(p_dma + 1);
+		p_dma->eof=0;
 
 		remain -= one_len;
-		++pdma;
+		++p_dma;
 		b += one_len;
 	}
 
-	pdma[-1].empty = (int32_t)(&dmaDesc[0]); // make loop
+	p_dma[-1].empty = (int32_t)(&dmaDesc[0]); // make loop
 	dmaDesc[1].eof = 1;
 	dmaDesc[3].eof = 1; // make sure these blocks generates the interrupt
 
@@ -414,7 +414,7 @@ static uint16_t DRAM_ATTR gamma_table[256] = {
 #define B_COLSER (1<<0)
 #define B_COLLATCH (1<<1)
 #define B_ROWLATCH (1<<2)
-#define B_STATUSLED (1<<3)
+#define B_STATUS_LED (1<<3)
 
 /*
 	To simplify things,
@@ -455,7 +455,7 @@ time frame:
 
 static int IRAM_ATTR build_brightness(buf_t *buf, int row, int n)
 {
-	// build framebuffer content
+	// build frame buffer content
 	frame_buffer_t::array_t & array = get_current_frame_buffer().array();
 	for(int i = 0; i < NUM_LED1642; ++i)
 	{
@@ -796,7 +796,7 @@ void matrix_drive_set_current_gain(int gain)
 	}
 	else
 	{
-		// use LED1642's gain as loweest current gain
+		// use LED1642's gain as lowest current gain
 		// also use per-pixel brightness multiplication
 		gain *= 255;
 		gain /= 127;

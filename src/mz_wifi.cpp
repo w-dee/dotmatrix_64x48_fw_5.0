@@ -50,7 +50,7 @@ void ip_addr_settings_t::dump(const char * address_zero_comment) const
 #define MDNS_INSTANCE_NAME "MZ5 Dot Matrix Clock"
 
 /**
- * Initialze mDNS responder
+ * Initialize mDNS responder
  * */
 static void init_mDNS()
 {
@@ -114,7 +114,7 @@ static void WiFiEventHandler(WiFiEvent_t event, arduino_event_info_t info){
       break;
 
     case SYSTEM_EVENT_STA_WPS_ER_SUCCESS:
-//      printf("WPS successfull, stopping WPS and connecting to: %s\r\n", String(WiFi.SSID()).c_str() );
+//      printf("WPS successful, stopping WPS and connecting to: %s\r\n", String(WiFi.SSID()).c_str() );
 
 	  wps_last_state = event;
       esp_wifi_wps_disable();
@@ -439,7 +439,7 @@ bool validate_ipv4_netmask(const String  &string_addr)
 
 std::vector<wifi_scan_item_t> get_wifi_scan_list(size_t max)
 {
-	// here we use naiive method to sort the list.
+	// here we use naive method to sort the list.
 	// assumes list is not so big.
 	std::vector<wifi_scan_item_t> items;
 	int16_t result = WiFi.scanComplete();

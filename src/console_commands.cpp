@@ -37,7 +37,7 @@ static int any_key_pressed()
 }
 
 // wait for maximum 100ms, consuming any typed keys.
-// this will discard escape sequence garbage or EOL garbade.
+// this will discard escape sequence garbage or EOL garbage.
 static void consume_key_garbage()
 {
     for(int i = 0; i < 5; )
@@ -59,7 +59,7 @@ namespace cmd_wifi_show
     struct arg_lit *help = arg_litn(NULL, "help", 0, 1, "Display help and exit");
     struct arg_lit *i_am_safe = arg_litn(nullptr, "i-am-safe", 0, 1, "Show non-masked PSK (password)");
     struct arg_end *end = arg_end(5);
-    void * argtable[] = { help, i_am_safe, end };
+    void * arg_table[] = { help, i_am_safe, end };
 
     static void show_ip_configuration()
     {
@@ -88,7 +88,7 @@ namespace cmd_wifi_show
     {
 
     public:
-        _cmd() : cmd_base_t("wifi-show", "Display WiFi status", argtable) {}
+        _cmd() : cmd_base_t("wifi-show", "Display WiFi status", arg_table) {}
 
     private:
         int func(int argc, char **argv)
@@ -108,7 +108,7 @@ namespace cmd_wifi_ip
     struct arg_lit *help, *dhcp;
     struct arg_str *address, *gw, *mask, *dns;
     struct arg_end *end;
-    void * argtable[] = {
+    void * arg_table[] = {
             help =    arg_litn(NULL, "help", 0, 1, "Display help and exit"),
             dhcp =    arg_litn("d",  "dhcp", 0, 1, "Use DHCP"),
             address = arg_strn("a",  "addr", "<v4addr>", 0, 1, "IPv4 address"),
@@ -122,7 +122,7 @@ namespace cmd_wifi_ip
     {
 
     public:
-        _cmd() : cmd_base_t("wifi-ip", "Set DHCP mode or IP addresses manually", argtable) {}
+        _cmd() : cmd_base_t("wifi-ip", "Set DHCP mode or IP addresses manually", arg_table) {}
 
     private:
         static void set_dns(ip_addr_settings_t &settings)
@@ -207,7 +207,7 @@ namespace cmd_wifi_ap
     struct arg_lit *help, *i_am_safe;
     struct arg_str *ssid, *psk;
     struct arg_end *end;
-    void * argtable[] = {
+    void * arg_table[] = {
             help =    arg_litn(NULL, "help", 0, 1, "Display help and exit"),
             ssid =    arg_strn("s",  "ssid",   "<SSID>", 0, 1, "SSID name"),
             psk =     arg_strn("p",  "psk",    "<password>", 0, 1, "PSK (password)"),
@@ -219,7 +219,7 @@ namespace cmd_wifi_ap
     {
 
     public:
-        _cmd() : cmd_base_t("wifi-ap", "Set AP's SSID and PSK(password)", argtable) {}
+        _cmd() : cmd_base_t("wifi-ap", "Set AP's SSID and PSK(password)", arg_table) {}
 
     private:
 
@@ -251,7 +251,7 @@ namespace cmd_wifi_scan
     struct arg_lit *hidden, *active;
     struct arg_int *num;
     struct arg_end *end;
-    void * argtable[] = {
+    void * arg_table[] = {
             help =     arg_litn(NULL, "help", 0, 1, "Display help and exit"),
             num =      arg_intn("m", nullptr,  "<1-255>", 0, 1, "Maximum network count to show (default 20)"),
             hidden =   arg_litn("h", "hidden", 0, 1, "Show also hidden networks"),
@@ -263,7 +263,7 @@ namespace cmd_wifi_scan
     {
 
     public:
-        _cmd() : cmd_base_t("wifi-scan", "Scan WiFi networks", argtable) {}
+        _cmd() : cmd_base_t("wifi-scan", "Scan WiFi networks", arg_table) {}
 
     private:
 
@@ -337,7 +337,7 @@ namespace cmd_wifi_wps
 {
     struct arg_lit *help, *push;
     struct arg_end *end;
-    void * argtable[] = {
+    void * arg_table[] = {
             help =    arg_litn(NULL, "help", 0, 1, "Display help and exit"),
             push =    arg_litn("p",  "push", 0, 1, "Start WPS (Push Button Mode)"),
             end =     arg_end(5)
@@ -347,7 +347,7 @@ namespace cmd_wifi_wps
     {
 
     public:
-        _cmd() : cmd_base_t("wifi-wps", "Start WPS", argtable) {}
+        _cmd() : cmd_base_t("wifi-wps", "Start WPS", arg_table) {}
 
     private:
 
@@ -411,7 +411,7 @@ namespace cmd_ntp
     struct arg_str *servers = arg_strn("s", "server", "<server>", 0, 3, "NTP servers");
     struct arg_str *time_zone = arg_strn("z", "time-zone", "<tz-spec>", 0, 1, "Time zone (eg. JST-9)");
     struct arg_end *end = arg_end(5);
-    void * argtable[] = { help, servers, time_zone, end };
+    void * arg_table[] = { help, servers, time_zone, end };
 
     static void show_ntp_configuration()
     {
@@ -432,14 +432,14 @@ namespace cmd_ntp
         tm = time(&tm);
         printf("Local time got   : %s", ctime_r(&tm, buf)); // ctime puts \n at its last of output
         tm = get_last_time_correct_timestamp();
-        printf("Last NTP responce: %s", tm ? ctime_r(&tm, buf) : "Not yet received\n");
+        printf("Last NTP response: %s", tm ? ctime_r(&tm, buf) : "Not yet received\n");
     }
 
     class _cmd : public cmd_base_t
     {
 
     public:
-        _cmd() : cmd_base_t("ntp", "Set NTP servers and time zone", argtable) {}
+        _cmd() : cmd_base_t("ntp", "Set NTP servers and time zone", arg_table) {}
 
     private:
         int func(int argc, char **argv)
@@ -500,7 +500,7 @@ namespace cmd_rmt
     struct arg_lit *recv;
     struct arg_int *num;
     struct arg_end *end;
-    void * argtable[] = {
+    void * arg_table[] = {
             help =    arg_litn(NULL, "help", 0, 1, "Display help and exit"),
             recv =    arg_litn("r", nullptr, 0, 1, "Do receive"),
             num =     arg_int1(nullptr, nullptr, "<0-99>", "Data slot number"),
@@ -511,26 +511,26 @@ namespace cmd_rmt
     {
 
     public:
-        _cmd() : cmd_base_t("rmt", "IR remote control", argtable) {}
+        _cmd() : cmd_base_t("rmt", "IR remote control", arg_table) {}
 
     private:
 
         int func(int argc, char **argv)
         {
-            char numstr[5];
+            char num_str[5];
             if(num->ival[0] < 0 || num->ival[0] > 99)
             {
                 printf("Data slot number must be within 0 - 99.\n");
                 return 1;
             }
-            snprintf(numstr, sizeof(numstr), "%02d", num->ival[0]);
+            snprintf(num_str, sizeof(num_str), "%02d", num->ival[0]);
 
             consume_key_garbage();
             if(!recv->count)
             {
                 // send mode
-                run_in_main_thread([&numstr] () -> int {
-                        rmt_start_send(numstr + String(".rmt"));
+                run_in_main_thread([&num_str] () -> int {
+                        rmt_start_send(num_str + String(".rmt"));
                         return 0;
                     });
                 while(true)
@@ -544,10 +544,10 @@ namespace cmd_rmt
                 switch(result)
                 {
                 case rmt_notfound:
-                    printf("Slot %s not found.\n", numstr);
+                    printf("Slot %s not found.\n", num_str);
                     break;
                 case rmt_broken:
-                    printf("Broken slot number %s.\n", numstr);
+                    printf("Broken slot number %s.\n", num_str);
                     break;
                 default:
                     break; // unknown state ...?
@@ -595,8 +595,8 @@ namespace cmd_rmt
                     break;
                 case rmt_done:
                     // done; save the data
-                    run_in_main_thread([&numstr] () -> int {
-                        rmt_save(numstr + String(".rmt"));
+                    run_in_main_thread([&num_str] () -> int {
+                        rmt_save(num_str + String(".rmt"));
                         return 0;
                     });
                     break;
@@ -621,7 +621,7 @@ namespace cmd_reboot
     struct arg_lit *help;
     struct arg_lit *hard;
     struct arg_end *end;
-    void * argtable[] = {
+    void * arg_table[] = {
             help =    arg_litn(nullptr, "help", 0, 1, "Display help and exit"),
             hard =    arg_litn(nullptr, "clear-all-settings", 0, 1, "Clear all settings to their default values"),
             end =     arg_end(5)
@@ -631,7 +631,7 @@ namespace cmd_reboot
     {
 
     public:
-        _cmd() : cmd_base_t("reboot", "Reboot and optionally clear all settings", argtable) {}
+        _cmd() : cmd_base_t("reboot", "Reboot and optionally clear all settings", arg_table) {}
 
     private:
 
@@ -651,7 +651,7 @@ namespace cmd_keys
 {
     struct arg_lit *help;
     struct arg_end *end;
-    void * argtable[] = {
+    void * arg_table[] = {
             help =    arg_litn(nullptr, "help", 0, 1, "Display help and exit"),
             end =     arg_end(5)
             };
@@ -660,7 +660,7 @@ namespace cmd_keys
     {
 
     public:
-        _cmd() : cmd_base_t("keys", "Emulate physical button by terminal input", argtable) {}
+        _cmd() : cmd_base_t("keys", "Emulate physical button by terminal input", arg_table) {}
 
     private:
 
@@ -822,13 +822,13 @@ namespace cmd_ver
 {
     struct arg_lit *help = arg_litn(NULL, "help", 0, 1, "Display help and exit");
     struct arg_end *end = arg_end(5);
-    void * argtable[] = { help, end };
+    void * arg_table[] = { help, end };
 
     class _cmd : public cmd_base_t
     {
 
     public:
-        _cmd() : cmd_base_t("ver", "Show version", argtable) {}
+        _cmd() : cmd_base_t("ver", "Show version", arg_table) {}
 
     private:
         int func(int argc, char **argv)
@@ -845,13 +845,13 @@ namespace cmd_t
 {
     struct arg_lit *help = arg_litn(NULL, "help", 0, 1, "Display help and exit");
     struct arg_end *end = arg_end(5);
-    void * argtable[] = { help, end };
+    void * arg_table[] = { help, end };
 
     class _cmd : public cmd_base_t
     {
 
     public:
-        _cmd() : cmd_base_t("t", "Try to enable line edit / history", argtable) {}
+        _cmd() : cmd_base_t("t", "Try to enable line edit / history", arg_table) {}
 
     private:
         int func(int argc, char **argv)

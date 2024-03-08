@@ -198,7 +198,7 @@ static void write_ambient_settings()
 	settings_write_vector("ambient", vec, SETTINGS_OVERWRITE);
 }
 
-// load settings from the setgins store
+// load settings from the settings store
 static void read_ambient_settings()
 {
 	string_vector vec;
@@ -299,14 +299,14 @@ static constexpr int AMBIENT_STEP_PREC = 8192;
 static int current_ambient_brightness = DEFAULT_BRIGHTNESS * AMBIENT_STEP_PREC; // current ambient brightness used by adaptive smoothing; multiplied by AMBIENT_STEP_PREC
 static int current_ambient_brightness_step; // current ambient brightness incremental smoothing factor
 static constexpr int MAX_AMBIENT_BRIGHTNESS_STEP = AMBIENT_STEP_PREC/2;
-static constexpr int AMBIENT_FAST_STEP_THRESH = 50; // above this difference, ambient steo goes at max speed
+static constexpr int AMBIENT_FAST_STEP_THRESH = 50; // above this difference, ambient step goes at max speed
 static int16_t read_ambient()
 {
 	// the ambient raw value at my development desk is:
 	// 820 --- almost complete dark
 	// 500 --- under strong light
 
-	// According to the PhotoTransistor(PT)=NJL7302-F3's datasheet,
+	// According to the PhotoTransistor(PT)=NJL7302-F3's data sheet,
 	// light current vs illuminance is almost linear,
 	// IL = Ev*a + b
 	// where a = 0.5, b =~ 0

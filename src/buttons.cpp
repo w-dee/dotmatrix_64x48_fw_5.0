@@ -8,7 +8,7 @@ uint8_t buttons[MAX_BUTTONS] = {0};
 /**
  * Button repeat / debounce counter.
  * This counters are initially zero.
- * While the button is pused, it counts up.
+ * While the button is pushed, it counts up.
  * When the repeat counter reaches BUTTON_DEBOUNCE_COUNT,
  * the button is recognized as pushed.
  * The counter continues counting while the button is

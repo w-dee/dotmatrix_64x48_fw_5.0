@@ -147,7 +147,7 @@ bool partition_updater_t::write_sector(const uint8_t *buf)
     if (_progress == 0)
     {
         // the first sector
-        // save first byte (this byte will be overritten at the completion)
+        // save first byte (this byte will be overwritten at the completion)
         _first_byte = bbuf[0];
         bbuf[0] = 0xff; // we use 0xff here because flash device can clear bit easily
         // but set bit with difficulty (only erase operation can set the bits)
@@ -365,7 +365,7 @@ void updater_t::process_block()
             return;
         }
 
-        // determin partition type and prepare to flash
+        // determine partition type and prepare to flash
         partition_updater_t::update_type_t type = partition_updater_t::utUnknown;
         if (!strcmp(header.label, "font"))
             type = partition_updater_t::utFont;
@@ -565,7 +565,7 @@ void reboot(bool clear_settings)
 {
     if (clear_settings)
     {
-        // put all settings clear inidication file
+        // put all settings clear indication file
         FILE *f = fopen(CLEAR_SETTINGS_INDICATOR_FILE, "w");
         if (f)
             fclose(f);

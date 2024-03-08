@@ -17,7 +17,7 @@ static uint32_t movie_size = 0; // movie size
 #define MMAP_ACCESS_SIZE 8192
 /**
  * ensure the given address is accessible from the program.
- * the address space accessible is gurannteed at least 8kiB from the starting address.
+ * the address space accessible is guaranteed at least 8kiB from the starting address.
  * */
 static const uint8_t * ensure_access(uint32_t address)
 {
@@ -120,7 +120,7 @@ bool bad_apple()
         uint32_t size;
     } sig;
     if(ESP_OK != spi_flash_read(part->address, &sig, sizeof(sig))) return false;
-    if(memcmp(sig.sig, "BADAPPLE\0", 8)) return false; // singnature mismatch
+    if(memcmp(sig.sig, "BADAPPLE\0", 8)) return false; // signature mismatch
 
     printf("\n\nBAD APPLE: signature found at 0x%lx, length %d\n", (long)part->address, sig.size);
     start_address_in_flash = part->address;

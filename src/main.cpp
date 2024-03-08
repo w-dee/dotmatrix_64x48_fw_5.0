@@ -31,7 +31,7 @@ void setup() {
   // at this time. I'm not sure if I can do that using ESP-IDF with Arduino
   // option enabled, not using ESP-IDF and the Arduino core separately.
 
-  // So, ... This is one possible solution. Spawining a new loop task with large
+  // So, ... This is one possible solution. Spawning a new loop task with large
   // stack size, and delete old one.
   static volatile bool second_run = false;
   if(!second_run)
@@ -50,7 +50,7 @@ void setup() {
   // Read carefully around panic.cpp.
 
   status_led_early_setup();
-  matrix_drive_early_setup(); // blank all leds
+  matrix_drive_early_setup(); // blank all LEDs
   init_console(); // this also initializes the serial output and stdio
 
   delay(1000);

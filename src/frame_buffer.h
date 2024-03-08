@@ -21,19 +21,19 @@ public:
 	int get_height() const { return LED_MAX_LOGICAL_ROW; }
 
 	//! clip bounding box
-	//! returns wheter the box is remaining
+	//! returns whether the box is remaining
 	bool clip(int &fx, int &fy, int &x, int &y, int &w, int &h) const;
 
 	//! Returns array
 	array_t & IRAM_ATTR array() { return buffer; }
 
-	//! Set point at specified intencity level.
+	//! Set point at specified intensity level.
 	//! Note that this method does not check the boundary.
 	void set_point(int x, int y, int level)
 	{
 		buffer[y][x] = level;
 	}
-	//! get intencity level at specified point.
+	//! get intensity level at specified point.
 	//! Note that this method does not check the boundary.
 	int get_point(int x, int y) const
 	{
@@ -44,7 +44,7 @@ public:
 	void draw_char(int x, int y, int level, int ch, const font_base_t & font); 
 
 	//! Draw text at specified position
-	void draw_text(int x, int y, int level, const __FlashStringHelper *ifsh, const font_base_t & font); 
+	void draw_text(int x, int y, int level, const __FlashStringHelper *text, const font_base_t & font); 
 
 	void draw_text(int x, int y, int level, const String &s, const font_base_t & font)
 	{
@@ -69,7 +69,7 @@ public:
 };
 
 
-// the framebuffer
+// the frame buffer
 extern frame_buffer_t DRAM_ATTR buffer_one;
 extern frame_buffer_t DRAM_ATTR buffer_two; // for double buffering
 extern frame_buffer_t DRAM_ATTR * current_frame_buffer;

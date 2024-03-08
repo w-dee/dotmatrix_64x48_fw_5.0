@@ -53,7 +53,7 @@ public:
 /**
  * Check whether the connected terminal is capable of line editing.
  * This needs the terminal is actually connected and can bi-directionally
- * communicatable with the ESP32 at the time that this function is called.
+ * communicable with the ESP32 at the time that this function is called.
  * */
 void console_probe();
 

@@ -113,9 +113,9 @@ void frame_buffer_t::draw_char(int x, int y, int level, int ch, const font_base_
 	font.put(ch, level, x, y, *this);
 }
 
-void frame_buffer_t::draw_text(int x, int y, int level, const __FlashStringHelper *ifsh, const font_base_t & font)
+void frame_buffer_t::draw_text(int x, int y, int level, const __FlashStringHelper *text, const font_base_t & font)
 {
-	PGM_P p = reinterpret_cast<PGM_P>(ifsh);
+	PGM_P p = reinterpret_cast<PGM_P>(text);
 
 	uint8_t c;
 	while(0 != (c = pgm_read_byte(p++)))

@@ -13,7 +13,7 @@ class pendulum_scheduler_t
 public:
 	/**
 	 * check all pendulum interval and fire event if the period is reached.
-	 * this method should be called 1ms intervally.
+	 * this method should be called 1ms internally.
 	 * */
 	void check()
 	{

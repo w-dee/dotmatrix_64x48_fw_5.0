@@ -150,7 +150,7 @@ void panic_check_repeated_boot()
     if(last_cp == CP_SETTINGS_CLEAR)
     {
         // This will be an immediate failure.
-        // Settings store clearing has repeatedly failed; // ummm.......... what can we do ?
+        // Settings store clearing has repeatedly failed; // umm.......... what can we do ?
         do_panic(PANIC_SETTINGS_FS_CLEAR_FAILED);
     }
 
@@ -183,7 +183,7 @@ void panic_check_repeated_boot()
             break;
 
         case CP_FS_OPEN:
-            // LittleFS open has repeatedly failed; // ummm.......... what can we do ?
+            // LittleFS open has repeatedly failed; // umm.......... what can we do ?
             do_panic(PANIC_MAIN_FS_OPEN_FAILED);
             break;
         
@@ -243,7 +243,7 @@ void panic_notify_loop_is_running()
 
 void panic_show_boot_count()
 {
-    printf("Errornous repeated boot count = %d, last checkpoint = %d\n",
+    printf("Erroneous repeated boot count = %d, last checkpoint = %d\n",
         (int)panic_get_boot_count(), (int)panic_get_last_checkpoint());
 }
 

@@ -16,7 +16,7 @@
 //  st  0  1  2  3  4  5  sp
 //   1  x  x  x  x  x  x  0 
 // above waveform can be transmitted. 
-// we can use two WS2812 bit in one transmittion unit:
+// we can use two WS2812 bit in one transmission unit:
 // upper nibble and lower nibble.
 // each nibble can be:
 // for WS2812's 0 symbol:   0b 1100
@@ -29,7 +29,7 @@
 // then use DMA.
 
 
-#define IO_STATUSLED 4
+#define IO_STATUS_LED 4
 
 s_rgb_t status_led_array[MAX_STATUS_LED];
 static lldesc_t *dma_desc = nullptr;
@@ -189,9 +189,9 @@ void status_led_commit()
 void status_led_early_setup()
 {
 	init_dma_desc();
-	pinMode(IO_STATUSLED, OUTPUT);
-    pinMatrixOutDetach(IO_STATUSLED, false, false);
-    digitalWrite(IO_STATUSLED, LOW);
+	pinMode(IO_STATUS_LED, OUTPUT);
+    pinMatrixOutDetach(IO_STATUS_LED, false, false);
+    digitalWrite(IO_STATUS_LED, LOW);
 
 	// setup uart config
 	uart_config_t uart_config = {
@@ -206,7 +206,7 @@ void status_led_early_setup()
 
 	uart_param_config(UART_NUM_2, &uart_config);
 
-	uart_set_pin(UART_NUM_2, IO_STATUSLED, UART_PIN_NO_CHANGE,
+	uart_set_pin(UART_NUM_2, IO_STATUS_LED, UART_PIN_NO_CHANGE,
 		UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
 	uart_set_line_inverse(UART_NUM_2, UART_SIGNAL_TXD_INV);
 

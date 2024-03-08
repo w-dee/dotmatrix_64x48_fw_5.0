@@ -249,7 +249,7 @@ bool settings_read_vector(const String & _key, string_vector & value)
 bool settings_export(const String & target_name,
 	const String & exclude_prefix)
 {
-	const char wmode[2]  = { 'w',  0 };
+	const char w_mode[2]  = { 'w',  0 };
 	String tar_dir_prefix = F("mz5_settings");
 	File dir;
     File in;
@@ -258,13 +258,13 @@ bool settings_export(const String & target_name,
 	mtar_t *p_tar = new mtar_t;
 	if(!p_tar) return false;
 
-	// open tar archive for wriring
-	if(MTAR_ESUCCESS != mtar_open(p_tar, target_name.c_str(), wmode))
+	// open tar archive for writing
+	if(MTAR_ESUCCESS != mtar_open(p_tar, target_name.c_str(), w_mode))
 		goto error_end; // open error
 
 	// scan settings directory
 	puts("Scanning dir ...");
-	dir = SETTINGS_FS.open("/"); // open settings directg
+	dir = SETTINGS_FS.open("/"); // open settings directory
 	while(!!(in = dir.openNextFile()))
 	{
 		// skip excluded file name
@@ -309,8 +309,8 @@ error_end:
 //! import settings from specified main fs partition filename
 bool settings_import(const String & target_name)
 {
-	const char wmode[2]  = { 'w',  0 };
-	const char rmode[2]  = { 'r',  0 };
+	const char w_mode[2]  = { 'w',  0 };
+	const char r_mode[2]  = { 'r',  0 };
 //	const char nullstr[1] = { 0 };
 	int processed_files = 0;
 	int res;
@@ -324,7 +324,7 @@ bool settings_import(const String & target_name)
 	if(!p_tar || !p_h) goto error_end; // memory error
 
 	// open archive for reading
-	res = mtar_open(p_tar, target_name.c_str(), rmode);
+	res = mtar_open(p_tar, target_name.c_str(), r_mode);
 	if(MTAR_ESUCCESS != res)
 	{
 		printf("mtar_open() failed. code=%d\r\n", res);
@@ -343,7 +343,7 @@ bool settings_import(const String & target_name)
 		fn = String(F("/")) + fn; // make it on the root directory
 
 		// open file
-		File out = SETTINGS_FS.open(fn.c_str(), wmode);
+		File out = SETTINGS_FS.open(fn.c_str(), w_mode);
 
 		// reserve checksum space
 		uint32_t crc = 0xffffffff;

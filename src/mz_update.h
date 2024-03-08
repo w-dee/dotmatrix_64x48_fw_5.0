@@ -37,7 +37,7 @@ private:
 
 int get_current_active_partition_number();
 
-// update managemant class
+// update management class
 class updater_t
 {
     uint8_t *buffer;
@@ -92,7 +92,7 @@ public:
 };
 
 
-// infrator forward decl
+// inflator forward decl
 class mz_inflator_t;
 
 /**
