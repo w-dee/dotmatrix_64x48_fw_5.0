@@ -11,18 +11,34 @@ static std::deque<handler_queue_item_t *> queue;
 struct handler_queue_item_t
 {
     sync_handler_t handler;
-    SemaphoreHandle_t runsem;
+    TaskHandle_t waiting_task;
     int retval;
 
     handler_queue_item_t(sync_handler_t _handler) :
-        handler(_handler), runsem(xSemaphoreCreateMutex()), retval(-1)
+        handler(_handler), waiting_task(xTaskGetCurrentTaskHandle()), retval(-1)
     {
-        xSemaphoreTake(runsem, portMAX_DELAY);
     }
 
     ~handler_queue_item_t()
     {
-        vSemaphoreDelete(runsem);
+    }
+
+    void execute()
+    {
+        retval = handler();
+    }
+
+    void wait_execution_done()
+    {
+        ulTaskNotifyTake(
+                            pdTRUE,          /* Clear the notification value 
+                                                before exiting. */
+                            portMAX_DELAY ); /* Block indefinitely. */
+    }
+
+    void notify_execution_done()
+    {
+        xTaskNotifyGive(waiting_task);
     }
 };
 
@@ -41,9 +57,8 @@ int run_in_main_thread(sync_handler_t handler)
     portEXIT_CRITICAL(&queue_lock);
 
     // wait for the handler execution done
-    // queue item is removed in anothor function
-    xSemaphoreTake(item->runsem, portMAX_DELAY);
-    xSemaphoreGive(item->runsem);
+    // queue item is removed from deque in poll_main_thread_queue() function
+    item->wait_execution_done();
 
     int retval = item->retval;
 
@@ -70,8 +85,8 @@ void poll_main_thread_queue()
     if(!item) return;
 
     // run the handler
-    item->retval = item->handler();
+    item->execute();
 
-    // release semaphore to tell waiting thread that the handler has done
-    xSemaphoreGive(item->runsem);
+    // tell waiting task that the handler has done
+    item->notify_execution_done();
 }
