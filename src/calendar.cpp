@@ -51,11 +51,9 @@ void init_calendar()
 	settings_read_vector(F("time_servers"), time_servers);
     if(time_servers.size() > 3) time_servers.resize(3); // only three servers are supported
 	settings_read(F("time_zone"), time_zone);
-
     sntp_set_time_sync_notification_cb(sntp_sync_time_cb);
 
     calendar_reconfigure();
-
 }
 
 /**

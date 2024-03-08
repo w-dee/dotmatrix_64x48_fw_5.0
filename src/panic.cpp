@@ -9,7 +9,7 @@
 static nvs_handle nvs_hnd;
 static const char *boot_count_name = "boot_count";
 static const char *boot_cp_name = "boot_cp";
-bool indicate_clear_settings = false; // set true if settings store clearing is needed
+static const char *boot_clear_settings_name = "boot_clear";
 
 
 // rough delay for panic loop
@@ -89,12 +89,16 @@ void panic_reset_boot_count()
 {
     nvs_set_u32(nvs_hnd, boot_count_name, 0);
     nvs_set_u8(nvs_hnd, boot_cp_name, (uint8_t) 0);
+    nvs_set_u8(nvs_hnd, boot_clear_settings_name, (uint8_t) 0);
     nvs_commit(nvs_hnd);
 }
 
 // record current boot checkpoint progress
 void panic_record_checkpoint(boot_checkpoint_t cp)
 {
+    printf("Boot checkpoint: %d\r\n", (int)cp);
+    fflush(stderr);
+    delay(100);
     nvs_set_u8(nvs_hnd, boot_cp_name, (uint8_t) cp);
     nvs_commit(nvs_hnd);
 }
@@ -109,6 +113,34 @@ boot_checkpoint_t panic_get_last_checkpoint()
     }
     return (boot_checkpoint_t)value;
 }
+
+// set NVS "clear settings on next boot" flag and immediately reboot
+void set_nvs_clear_settings_on_next_boot_and_reboot()
+{
+    printf("Set 'settings clear flag' on NVS. Rebooting now.\n");
+    panic_reset_boot_count();
+    nvs_set_u8(nvs_hnd, boot_clear_settings_name, (uint8_t) 1);
+    nvs_commit(nvs_hnd);
+    delay(100);
+    immediate_reset();
+}
+
+// Get NVS "clear settings on next boot" flag. The flag will be cleared.
+bool get_nvs_clear_settings()
+{
+    uint8_t value;
+    bool ret = false;
+    if(ESP_OK != nvs_get_u8(nvs_hnd, boot_clear_settings_name, &value))
+        ret = false;
+    else
+        ret = value == 1;
+
+    nvs_set_u8(nvs_hnd, boot_clear_settings_name, (uint8_t) 0);
+    nvs_commit(nvs_hnd);
+
+    return ret;
+}
+
 
 #define BOOT_REPEAT_THRESH 5
 // check repeating boot
@@ -163,7 +195,15 @@ void panic_check_repeated_boot()
         case CP_SETTINGS_OPEN:
             // settings store open has repeatedly failed after clearing the store.
             // try clearing the settings store.
-            indicate_clear_settings = true;
+            set_nvs_clear_settings_on_next_boot_and_reboot();
+            break;
+
+        case CP_BUTTON_CHECK:
+            do_panic(PANIC_BUTTON_CHECK);
+            break;
+
+        case CP_MISC_SETUP:
+            do_panic(PANIC_MISC_SETUP);
             break;
 
         case CP_WIFI_START:
@@ -173,6 +213,10 @@ void panic_check_repeated_boot()
             printf("Seems wifi settings is rotten.\n");
             printf("Clearing the wifi setting.\n");
             wifi_set_clear_setting_flag();
+            break;
+
+        case CP_CONSOLE_START:
+            do_panic(PANIC_CONSOLE_START); // wtf...
             break;
         }
     }

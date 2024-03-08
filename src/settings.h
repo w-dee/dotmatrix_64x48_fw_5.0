@@ -18,10 +18,8 @@ struct settings_overwrite_t { bool overwrite;  };
  * */
 void init_settings();
 
-/**
- * Clear settings. This must be called before init_settings() if needed.
- * */
-void clear_settings();
+
+void _clear_settings();
 
 bool settings_write(const String & key, const void * ptr, size_t size, settings_overwrite_t overwrite = SETTINGS_OVERWRITE);
 bool settings_write(const String & key, const String & value, settings_overwrite_t overwrite = SETTINGS_OVERWRITE);

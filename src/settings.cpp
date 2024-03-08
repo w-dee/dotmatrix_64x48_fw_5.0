@@ -13,6 +13,8 @@ static const String SETTINGS_MOUNT_POINT(F("/settings")); // mount point
 
 fs::ANY_LittleFSFS SETTINGS_FS;
 
+
+
 void init_settings()
 {
 	puts("Settings store initializing ...");
@@ -26,13 +28,15 @@ retry:
 			immediate_reset(); // this will induce panic mode after several reboots.
 		}
 		printf("Settings store LittleFS mount failed. Trying to clear all settings.\n");
-		clear_settings();
+		_clear_settings();
 		second = true;
 		goto retry;
 	}
 }
 
-void clear_settings()
+// Clear settings store. Instead of calling this function directly,
+// call set_nvs_clear_settings_on_next_boot_and_reboot() in panic.cpp
+void _clear_settings()
 {
 	SETTINGS_FS.format(SETTINGS_PART_LABEL.c_str());
 }

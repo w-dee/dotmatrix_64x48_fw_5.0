@@ -628,6 +628,18 @@ void IRAM_ATTR build_second_half()
 
 }
 
+// IRAM-able substitute routine for digitalRead().
+// The digitalRead() seems to be no more IRAM-ATTR attribute attached.
+static inline int IRAM_ATTR iram__digitalRead(uint8_t pin)
+{
+    if(pin < 32) {
+        return (GPIO.in >> pin) & 0x1;
+    } else if(pin < 40) {
+        return (GPIO.in1.val >> (pin - 32)) & 0x1;
+    }
+    return 0;
+}
+
 
 uint8_t matrix_button_scan_bits; //!< holds currently pushed button bit-map ('1':pushed)
 static void IRAM_ATTR scan_button()
@@ -638,7 +650,7 @@ static void IRAM_ATTR scan_button()
 		typeof(matrix_button_scan_bits) mask = 1 << btn_num;
 		typeof(matrix_button_scan_bits) tmp = matrix_button_scan_bits;
 		tmp &= ~mask;
-		if(!digitalRead(IO_BUTTONSENSE))
+		if(!iram__digitalRead(IO_BUTTONSENSE))
 			tmp |= mask;
 		matrix_button_scan_bits = tmp;
 	}

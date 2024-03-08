@@ -25,7 +25,7 @@ public:
 	bool clip(int &fx, int &fy, int &x, int &y, int &w, int &h) const;
 
 	//! Returns array
-	array_t & DRAM_ATTR array() { return buffer; }
+	array_t & IRAM_ATTR array() { return buffer; }
 
 	//! Set point at specified intencity level.
 	//! Note that this method does not check the boundary.
@@ -75,8 +75,8 @@ extern frame_buffer_t DRAM_ATTR buffer_two; // for double buffering
 extern frame_buffer_t DRAM_ATTR * current_frame_buffer;
 extern frame_buffer_t DRAM_ATTR * bg_frame_buffer;
 
-static inline DRAM_ATTR frame_buffer_t & get_current_frame_buffer() { return *current_frame_buffer;}
-static inline DRAM_ATTR frame_buffer_t & get_bg_frame_buffer() { return *bg_frame_buffer;}
+static inline IRAM_ATTR frame_buffer_t & get_current_frame_buffer() { return *current_frame_buffer;}
+static inline IRAM_ATTR frame_buffer_t & get_bg_frame_buffer() { return *bg_frame_buffer;}
 
 //! swap current frame buffer
 void frame_buffer_flip();

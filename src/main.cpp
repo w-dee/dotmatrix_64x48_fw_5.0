@@ -22,7 +22,6 @@
 #define MY_CONFIG_ARDUINO_LOOP_STACK_SIZE 16384U
 extern TaskHandle_t loopTaskHandle; // defined in main.cpp of Arduino core
 extern void loopTask(void *pvParameters); // defined in main.cpp of Arduino core 
-extern bool indicate_clear_settings; // set true if settings store clearing is needed
 
 void setup() {
   // AARRRRRRRRRRGGGGHHHHHHHHHHHHHHHHHHHHHHH!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -45,16 +44,36 @@ void setup() {
   }
 
   // put your setup code here, to run once:
-  init_console(); // this also initializes the serial output and stdio
+
+
+  // Booting process is fairly complex due to various boot checkpoint, recovery process, and panic.
+  // Read carefully around panic.cpp.
 
   status_led_early_setup();
   matrix_drive_early_setup(); // blank all leds
+  init_console(); // this also initializes the serial output and stdio
 
   delay(1000);
 
   panic_init();
   panic_show_boot_count();
   panic_check_repeated_boot();
+ 
+  panic_record_checkpoint(CP_FS_OPEN);
+  init_fs(); // in init_fs(), if main LittleFS mount fails, set_system_recovery_mode() will be called.
+
+  // if indicate_clear_settings flag in NVS memory is set
+  panic_record_checkpoint(CP_SETTINGS_CLEAR);
+  if(get_nvs_clear_settings())
+  {
+    printf("Clearing settings store requested. Clearing.\n");
+    fflush(stdout);
+    _clear_settings();
+  }
+
+  panic_record_checkpoint(CP_SETTINGS_OPEN);
+  init_settings();
+
   printf("\n\nGreetings. This is MZ5 firmware.\n");
   printf("%s\n", version_get_info_string().c_str());
   show_ota_boot_status();
@@ -62,12 +81,10 @@ void setup() {
   panic_record_checkpoint(CP_MATRIX_CHECK);
   matrix_drive_setup();
 
-  panic_record_checkpoint(CP_FS_OPEN);
-  init_fs(); // in init_fs(), if main LittleFS mount fails, set_system_recovery_mode() will be called.
-
-  panic_record_checkpoint(CP_SETTINGS_CLEAR);
-  // before init_settings, check cancel buttion be pressed over 1sec
+  // check cancel button be pressed over 1sec
   delay(100); // wait for matrix row drive cycles several times
+
+  panic_record_checkpoint(CP_BUTTON_CHECK);
   button_check_physical_buttons_are_sane(); // check whether the button input is floating or not
 
   if(button_get_scan_bits() & BUTTON_CANCEL)
@@ -85,7 +102,7 @@ void setup() {
     {
         printf(" OK, now clearing settings.");
         fflush(stdout);
-        clear_settings();
+        set_nvs_clear_settings_on_next_boot_and_reboot(); // will reboot. does not return
     }
     puts("");
   }
@@ -97,33 +114,25 @@ void setup() {
     unlink(CLEAR_SETTINGS_INDICATOR_FILE);
     printf("Clearing settings requested.\n");
     fflush(stdout);
-    clear_settings();
+    set_nvs_clear_settings_on_next_boot_and_reboot(); // will reboot. does not return
   }
 
-  // or, if indicate_clear_settings flag is set
-  if(indicate_clear_settings)
-  {
-    printf("Mounting settings store repeatedly failed. Clearing settings.\n");
-    fflush(stdout);
-    clear_settings();
-  }
-
-
-  panic_record_checkpoint(CP_SETTINGS_OPEN);
-  init_settings();
-
-  wifi_setup();
-  init_calendar(); // sntp initialization needs to be located after network stack initialization
+  panic_record_checkpoint(CP_MISC_SETUP);
+  init_calendar();
   init_i2c();
   init_bme280();
   init_ambient();
   init_font_ft();
-  web_server_setup();
   ui_setup();
-  begin_console();
 
   panic_record_checkpoint(CP_WIFI_START);
+  wifi_setup();
+  web_server_setup();
   wifi_start();
+
+
+  panic_record_checkpoint(CP_CONSOLE_START);
+  begin_console();
 }
 
 void loop() {
